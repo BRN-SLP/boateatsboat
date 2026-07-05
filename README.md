@@ -1,58 +1,90 @@
-# boateatsboat
+# BoatEatsBoat
 
-A new Celo blockchain project
+On-chain battleship in a bathtub. Plastic ships, rubber ducks, real Celo duels.
 
-A modern Celo blockchain application built with Next.js, TypeScript, and Turborepo.
+Players commit fleet layouts as Merkle roots, fire shots, and prove every hit/miss cryptographically. The AI agent joins free duels automatically. Tournaments with cUSD escrow and Top3 split payout.
 
-## Getting Started
+## What
 
-1. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+Classic Battleship, reimagined as a witty bathtub arena:
+- **Merkle-commit / fire / prove**: defenders answer shots with cryptographic proofs. Lying is impossible.
+- **Ship classes**: Carrier (5), armored Battleship (4, hp=2), Cruiser (3), stealth Submarine (3).
+- **Modes**: 1v1 duels (free or cUSD-wagered), single-elimination tournaments (Top3 split).
+- **AI agent**: off-chain hunt/target opponent with its own wallet. Joins free duels within seconds.
+- **Bathtub vibe**: rubber ducks, toy ships, fire-and-sink animations. Inferno (default) and Classic themes.
 
-2. Start the development server:
-   ```bash
-   pnpm dev
-   ```
+## Repo layout
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+```
+apps/
+  contracts/   BattleshipGame UUPS proxy + tests + deploy script
+  agent/       Off-chain AI opponent (Node + viem)
+  web/         Next.js 14 front end (wagmi + rainbowkit + framer-motion)
+```
 
-## Project Structure
+## Deployments
 
-This is a monorepo managed by Turborepo with the following structure:
+| Chain | Proxy | Impl |
+|---|---|---|
+| Celo Sepolia (11142220) | `0x1c8780b202af9917ba8CaeD65202ffD2013d2205` | `0x03167BC276B80A082547F4Ab3Ca03C05FE8B9c9E` |
+| Celo mainnet (42220) | _not deployed yet_ | _not deployed yet_ |
 
-- `apps/web` - Next.js application with embedded UI components and utilities
-- `apps/hardhat` - Smart contract development environment
+Payment token: USDm on Sepolia (`0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`), cUSD on mainnet (`0x765DE816845861e75A25fCA122bb6898B8B1282a`).
 
-## Available Scripts
+## Local development
 
-- `pnpm dev` - Start development servers
-- `pnpm build` - Build all packages and apps
-- `pnpm lint` - Lint all packages and apps
-- `pnpm type-check` - Run TypeScript type checking
+```bash
+pnpm install
 
-### Smart Contract Scripts
+# contracts
+cd apps/contracts
+cp .env.example .env  # fill PRIVATE_KEY
+pnpm test             # 14 hardhat tests
+pnpm hardhat compile
 
-- `pnpm contracts:compile` - Compile smart contracts
-- `pnpm contracts:test` - Run smart contract tests
-- `pnpm contracts:deploy` - Deploy contracts to local network
-- `pnpm contracts:deploy:celo-sepolia` - Deploy to Celo Sepolia Testnet
-- `pnpm contracts:deploy:celo` - Deploy to Celo Mainnet
+# web
+cd ../web
+echo 'NEXT_PUBLIC_WC_PROJECT_ID=...' > .env.local
+pnpm dev
 
-## Tech Stack
+# agent (needs a deployed contract + funded wallet)
+cd ../agent
+cp .env.example .env  # fill AGENT_PRIVATE_KEY + GAME_CONTRACT
+pnpm dev
+```
 
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui
-- **Smart Contracts**: Hardhat with Viem
-- **Monorepo**: Turborepo
-- **Package Manager**: PNPM
+## Deploy
 
-## Learn More
+### Contracts
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Celo Documentation](https://docs.celo.org/)
-- [Turborepo Documentation](https://turbo.build/repo/docs)
-- [shadcn/ui Documentation](https://ui.shadcn.com/)
+```bash
+cd apps/contracts
+# .env must have PRIVATE_KEY + PAYMENT_TOKEN
+PAYMENT_TOKEN=0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80 \
+  pnpm hardhat run scripts/deploy.ts --network celo-sepolia
+```
+
+### Web (Vercel)
+
+1. Push this repo to GitHub.
+2. Import on Vercel. Root: `/`. Build command: `pnpm build`. Output: auto (Next.js).
+3. Set env vars:
+   - `NEXT_PUBLIC_WC_PROJECT_ID` (WalletConnect project ID from cloud.walletconnect.com)
+   - `NEXT_PUBLIC_GAME_PROXY_SEPOLIA=0x1c8780b202af9917ba8CaeD65202ffD2013d2205` (already default)
+   - `NEXT_PUBLIC_GAME_PROXY_MAINNET` (when mainnet deploys)
+4. Deploy.
+
+## Stack
+
+- Next.js 14 + wagmi 2 + viem 2 + rainbowkit 2
+- Hardhat + @openzeppelin/hardhat-upgrades + @openzeppelin/contracts-upgradeable 5
+- framer-motion, tailwind, shadcn-style components
+- MiniPay auto-connect hook (scaffold-provided)
+- Celo skills: celopedia, celo-rpc, celo-stablecoins, minipay-integration, fee-abstraction
+
+## Status (2026-07-05)
+
+- Contract: 14/14 tests, deployed Celo Sepolia.
+- Agent: ready, tsc-clean.
+- Web: production build green, 5 routes (/, /play, /game/[id], /leaderboard).
+- Pending: Vercel deploy, mainnet deploy after Sepolia validation, Farcaster frame, hero artwork.
