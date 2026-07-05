@@ -1,4 +1,5 @@
 import type { HardhatUserConfig } from "hardhat/config";
+import "dotenv/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 import "@openzeppelin/hardhat-upgrades";
 
