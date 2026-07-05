@@ -1,0 +1,20 @@
+{
+  "name": "@boateatsboat/agent",
+  "version": "0.1.0",
+  "description": "Off-chain AI opponent for BoatEatsBoat. Joins open duels, plays hunt/target.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.2.2",
+    "@types/node": "^20.8.0"
+  }
+}
