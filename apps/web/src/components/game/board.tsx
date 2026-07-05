@@ -10,6 +10,8 @@ export interface BoardState {
   cells: CellVisual[];
 }
 
+export type { CellVisual };
+
 export function Board({
   state,
   theme,
