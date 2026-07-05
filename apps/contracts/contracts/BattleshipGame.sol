@@ -5,12 +5,15 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title BattleshipGame
 /// @notice BoatEatsBoat bathtub battleship. Merkle-commit / fire / proof / claim.
 /// @dev Board is 10x10. Each cell is a leaf: keccak256(abi.encodePacked(cellType, salt)).
 ///      cellType encodes ship id + hp + stealth flags. Cell type 0 = water.
 contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+    using SafeERC20 for IERC20;
     // ---------------------------------------------------------------------
     // Constants
     // ---------------------------------------------------------------------
@@ -73,6 +76,9 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(uint256 => Game) public games;
     uint256 public nextGameId;
 
+    // cUSD (or any ERC-20) used for wagers and tournament entry fees. Set at init.
+    IERC20 public paymentToken;
+
     // Pending shot awaiting proof from the defender.
     struct PendingShot {
         bool active;
@@ -91,6 +97,49 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     // Armor tracking: how many confirmed hits each cell of a defender has absorbed.
     // Keyed by (gameId, defenderIdx, cellIndex). Battleship (hp=2) needs 2 hits to sink.
     mapping(uint256 => mapping(uint8 => mapping(uint16 => uint8))) public cellHits;
+
+    // ---------------------------------------------------------------------
+    // Tournaments
+    // ---------------------------------------------------------------------
+
+    enum PayoutScheme {
+        WinnerTakesAll,
+        Top3
+    }
+
+    enum TournamentState {
+        Registration,
+        Active,
+        Finished
+    }
+
+    struct Tournament {
+        address creator;
+        uint256 entryFee; // cUSD per player, 0 = free
+        uint8 maxPlayers; // cap; must be power of 2
+        uint8 rounds; // log2(maxPlayers)
+        uint256 regDeadline;
+        PayoutScheme scheme;
+        TournamentState state;
+        address[] registrants;
+        // bracket[round][slot] = gameId of the duel at that position; 0 = TBD.
+        mapping(uint8 => mapping(uint16 => uint256)) bracket;
+        // Winners tree: round -> slot -> address (filled as rounds complete).
+        mapping(uint8 => mapping(uint16 => address)) slotWinner;
+        uint256 prizePool; // accumulated entry fees
+        address firstPlace; // set on finish
+        address secondPlace;
+        address thirdPlace;
+        bool prizesClaimed;
+    }
+
+    mapping(uint256 => Tournament) private tournaments;
+    uint256 public nextTournamentId;
+    // gameId -> tournamentId (0 if not part of a tournament)
+    mapping(uint256 => uint256) public gameTournament;
+    // gameId -> (round, slot) within its tournament
+    mapping(uint256 => uint16) public gameSlot;
+    mapping(uint256 => uint8) public gameRound;
 
     // ---------------------------------------------------------------------
     // Events
@@ -115,6 +164,13 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     event GameFinished(uint256 indexed gameId, address indexed winner, bool byForfeit);
     event WagerClaimed(uint256 indexed gameId, address indexed winner, uint256 amount);
 
+    event TournamentCreated(uint256 indexed tournamentId, address indexed creator, uint256 entryFee, uint8 maxPlayers, PayoutScheme scheme);
+    event TournamentRegistered(uint256 indexed tournamentId, address indexed player);
+    event TournamentStarted(uint256 indexed tournamentId, uint8 rounds);
+    event TournamentRoundResolved(uint256 indexed tournamentId, uint8 round, uint16 slot, address winner);
+    event TournamentFinished(uint256 indexed tournamentId, address first, address second, address third);
+    event TournamentPrizeClaimed(uint256 indexed tournamentId, address indexed claimant, uint256 amount);
+
     // ---------------------------------------------------------------------
     // Errors
     // ---------------------------------------------------------------------
@@ -130,24 +186,44 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     error WagerMismatch();
     error GameNotFinished();
     error OnlyWinningPlayer();
+    // Tournament errors
+    error TournamentFull();
+    error TournamentNotOpen();
+    error RegistrationClosed();
+    error NotEnoughPlayers();
+    error NotPowerOfTwo();
+    error OnlyTournamentCreator();
+    error TournamentGameNotResolved();
+    error InvalidSlot();
+    error PrizesAlreadyClaimed();
+    error NotATournamentWinner();
 
     // ---------------------------------------------------------------------
     // Initializer
     // ---------------------------------------------------------------------
 
     /// @custom:oz-upgrades-validate-as-initializer
-    function initialize() public virtual initializer {
+    /// @param _paymentToken cUSD (or any ERC-20) address for wagers and entry fees.
+    function initialize(address _paymentToken) public virtual initializer {
         __Ownable_init(msg.sender);
         nextGameId = 1;
+        nextTournamentId = 1;
+        paymentToken = IERC20(_paymentToken);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    /// @notice Owner can update the payment token (e.g. switch stablecoin per chain).
+    function setPaymentToken(address _paymentToken) external onlyOwner {
+        paymentToken = IERC20(_paymentToken);
+    }
 
     // ---------------------------------------------------------------------
     // Game lifecycle (Duel)
     // ---------------------------------------------------------------------
 
     /// @notice Create a new duel with an optional cUSD wager. Caller is player 0.
+    /// Wager is escrowed into the contract on creation.
     function createDuel(uint256 wager) external returns (uint256 gameId) {
         gameId = nextGameId++;
         Game storage g = games[gameId];
@@ -156,15 +232,19 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         g.wager = wager;
         g.lastActionAt = block.timestamp;
         g.moveTimeout = 24 hours;
+        if (wager > 0) {
+            paymentToken.safeTransferFrom(msg.sender, address(this), wager);
+        }
         emit GameCreated(gameId, msg.sender, wager);
     }
 
-    /// @notice Join an open duel as player 1.
-    function joinDuel(uint256 gameId) external payable {
+    /// @notice Join an open duel as player 1. Wager matched via cUSD transferFrom.
+    function joinDuel(uint256 gameId) external {
         Game storage g = games[gameId];
         if (g.state != GameState.Open) revert InvalidBoard();
-        // Wager is handled off-ring for simplicity; tracked as accounting here.
-        if (msg.value != g.wager) revert WagerMismatch();
+        if (g.wager > 0) {
+            paymentToken.safeTransferFrom(msg.sender, address(this), g.wager);
+        }
         g.players[1].account = msg.sender;
         g.state = GameState.Placing;
         g.lastActionAt = block.timestamp;
@@ -305,7 +385,21 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         wins[g.winner] += 1;
         losses[loser] += 1;
         _updateElo(g.winner, loser);
+
+        // Payout wager: winner takes both stakes. Tournament games payout via the tournament.
+        uint256 tid = gameTournament[gameId];
+        if (g.wager > 0 && tid == 0) {
+            uint256 payout = g.wager * 2;
+            paymentToken.safeTransfer(g.winner, payout);
+            emit WagerClaimed(gameId, g.winner, payout);
+        }
+
         emit GameFinished(gameId, g.winner, byForfeit);
+
+        // If this game belongs to a tournament, advance the bracket.
+        if (tid != 0) {
+            _advanceTournament(tid, gameId);
+        }
     }
 
     function _updateElo(address winner, address loser) internal {
@@ -346,5 +440,273 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     function gameCount() external view returns (uint256) {
         return nextGameId - 1;
+    }
+
+    // ---------------------------------------------------------------------
+    // Tournaments
+    // ---------------------------------------------------------------------
+
+    /// @notice Create a tournament. maxPlayers must be a power of 2 (8/16/32/64).
+    function createTournament(
+        uint256 entryFee,
+        uint8 maxPlayers,
+        uint256 regDeadline,
+        PayoutScheme scheme
+    ) external returns (uint256 tid) {
+        if (maxPlayers < 2) revert NotPowerOfTwo();
+        // Power-of-two check.
+        if (maxPlayers & (maxPlayers - 1) != 0) revert NotPowerOfTwo();
+        tid = nextTournamentId++;
+        Tournament storage t = tournaments[tid];
+        t.creator = msg.sender;
+        t.entryFee = entryFee;
+        t.maxPlayers = maxPlayers;
+        t.rounds = _log2(maxPlayers);
+        t.regDeadline = regDeadline;
+        t.scheme = scheme;
+        t.state = TournamentState.Registration;
+        emit TournamentCreated(tid, msg.sender, entryFee, maxPlayers, scheme);
+    }
+
+    /// @notice Register for a tournament. Escrows entryFee in cUSD.
+    function registerForTournament(uint256 tid) external {
+        Tournament storage t = tournaments[tid];
+        if (t.state != TournamentState.Registration) revert TournamentNotOpen();
+        if (block.timestamp > t.regDeadline) revert RegistrationClosed();
+        if (t.registrants.length >= t.maxPlayers) revert TournamentFull();
+        if (t.entryFee > 0) {
+            paymentToken.safeTransferFrom(msg.sender, address(this), t.entryFee);
+            t.prizePool += t.entryFee;
+        }
+        t.registrants.push(msg.sender);
+        emit TournamentRegistered(tid, msg.sender);
+    }
+
+    /// @notice Creator seeds the bracket after registration closes. BYEs fill odd slots.
+    function startTournament(uint256 tid) external {
+        Tournament storage t = tournaments[tid];
+        if (msg.sender != t.creator) revert OnlyTournamentCreator();
+        if (t.state != TournamentState.Registration) revert TournamentNotOpen();
+        if (t.registrants.length < 2) revert NotEnoughPlayers();
+        // Round up registrants to next power of two by padding with address(0) (BYE).
+        uint8 size = _nextPow2(uint8(t.registrants.length));
+        if (size > t.maxPlayers) size = t.maxPlayers;
+        for (uint16 i = 0; i < size; i++) {
+            address p = i < t.registrants.length ? t.registrants[i] : address(0);
+            t.slotWinner[0][i] = p;
+        }
+        t.state = TournamentState.Active;
+        emit TournamentStarted(tid, t.rounds);
+        _pairNextRound(tid, 0, size);
+    }
+
+    /// @dev Pair adjacent winners of the previous round into duels for the next round.
+    function _pairNextRound(uint256 tid, uint8 round, uint16 slots) internal {
+        Tournament storage t = tournaments[tid];
+        for (uint16 slot = 0; slot + 1 < slots; slot += 2) {
+            address a = t.slotWinner[round][slot];
+            address b = t.slotWinner[round][slot + 1];
+            if (a == address(0) && b == address(0)) {
+                // Both empty (shouldn't happen at round 0, but guard anyway).
+                continue;
+            }
+            if (a == address(0)) {
+                // BYE: b auto-advances.
+                t.slotWinner[round + 1][slot / 2] = b;
+                emit TournamentRoundResolved(tid, round, slot, b);
+                continue;
+            }
+            if (b == address(0)) {
+                t.slotWinner[round + 1][slot / 2] = a;
+                emit TournamentRoundResolved(tid, round, slot, a);
+                continue;
+            }
+            // Create a tournament duel: free (entry fee already escrowed).
+            uint256 gameId = nextGameId++;
+            Game storage g = games[gameId];
+            g.state = GameState.Placing; // skip Open; both players known
+            g.players[0].account = a;
+            g.players[1].account = b;
+            g.lastActionAt = block.timestamp;
+            g.moveTimeout = 24 hours;
+            gameTournament[gameId] = tid;
+            gameRound[gameId] = round;
+            gameSlot[gameId] = slot;
+            t.bracket[round][slot] = gameId;
+            emit GameCreated(gameId, a, 0);
+        }
+    }
+
+    /// @dev Called from _finishGame when a tournament game completes. Advances winner.
+    function _advanceTournament(uint256 tid, uint256 gameId) internal {
+        Tournament storage t = tournaments[tid];
+        if (t.state != TournamentState.Active) return;
+        uint8 round = gameRound[gameId];
+        uint16 slot = gameSlot[gameId];
+        address winner = games[gameId].winner;
+        if (winner == address(0)) return;
+        t.slotWinner[round + 1][slot / 2] = winner;
+        emit TournamentRoundResolved(tid, round, slot, winner);
+
+        // Count resolved slots in the current round.
+        uint16 slotsThisRound = t.maxPlayers >> round;
+        bool roundComplete = true;
+        for (uint16 s = 0; s + 1 < slotsThisRound; s += 2) {
+            if (
+                t.bracket[round][s] != 0 && games[t.bracket[round][s]].state != GameState.Finished
+            ) {
+                roundComplete = false;
+                break;
+            }
+            if (
+                t.bracket[round][s + 1] != 0 &&
+                games[t.bracket[round][s + 1]].state != GameState.Finished
+            ) {
+                roundComplete = false;
+                break;
+            }
+        }
+        if (!roundComplete) return;
+
+        // Was this the final round?
+        if (round + 1 >= t.rounds) {
+            _finishTournament(tid);
+            return;
+        }
+        // Pair the next round using the freshly populated slotWinner[round+1].
+        uint16 nextSlots = slotsThisRound / 2;
+        _pairNextRound(tid, round + 1, nextSlots * 2);
+    }
+
+    function _finishTournament(uint256 tid) internal {
+        Tournament storage t = tournaments[tid];
+        t.state = TournamentState.Finished;
+        address champ = t.slotWinner[t.rounds][0];
+        t.firstPlace = champ;
+        // secondPlace = loser of the final. We can derive from the final game.
+        // thirdPlace = best loser of semifinals (skip rigorous 3rd-place match for gas).
+        address second = address(0);
+        address third = address(0);
+        // Final game is bracket[rounds-1][0].
+        uint256 finalGame = t.bracket[t.rounds - 1][0];
+        if (finalGame != 0) {
+            Game storage fg = games[finalGame];
+            second = fg.winner == fg.players[0].account ? fg.players[1].account : fg.players[0].account;
+        }
+        if (t.rounds >= 2) {
+            // Semifinals losers (two slots at round rounds-2).
+            uint8 sf = t.rounds - 2;
+            uint256 g0 = t.bracket[sf][0];
+            uint256 g1 = t.bracket[sf][1];
+            if (g0 != 0) {
+                Game storage sg = games[g0];
+                third = sg.winner == sg.players[0].account ? sg.players[1].account : sg.players[0].account;
+            }
+            // Prefer the semifinalist that lasted longer if both present; we keep first for simplicity.
+            (g1); // explicit no-op to silence unused warning
+        }
+        t.secondPlace = second;
+        t.thirdPlace = third;
+        emit TournamentFinished(tid, champ, second, third);
+    }
+
+    /// @notice Winner claims their share of the prize pool per the payout scheme.
+    function claimTournamentPrize(uint256 tid) external {
+        Tournament storage t = tournaments[tid];
+        if (t.state != TournamentState.Finished) revert GameNotFinished();
+        if (t.prizesClaimed) revert PrizesAlreadyClaimed();
+        if (t.prizePool == 0) {
+            t.prizesClaimed = true;
+            return;
+        }
+        address first = t.firstPlace;
+        address second = t.secondPlace;
+        address third = t.thirdPlace;
+        if (t.scheme == PayoutScheme.Top3 && third != address(0)) {
+            uint256 firstShare = (t.prizePool * 70) / 100;
+            uint256 secondShare = (t.prizePool * 20) / 100;
+            uint256 thirdShare = t.prizePool - firstShare - secondShare; // remainder = 10%
+            paymentToken.safeTransfer(first, firstShare);
+            paymentToken.safeTransfer(second, secondShare);
+            paymentToken.safeTransfer(third, thirdShare);
+            emit TournamentPrizeClaimed(tid, first, firstShare);
+        } else {
+            paymentToken.safeTransfer(first, t.prizePool);
+            emit TournamentPrizeClaimed(tid, first, t.prizePool);
+        }
+        t.prizesClaimed = true;
+    }
+
+    // ---------------------------------------------------------------------
+    // Tournament views
+    // ---------------------------------------------------------------------
+
+    function getTournamentRegistrants(uint256 tid) external view returns (address[] memory) {
+        return tournaments[tid].registrants;
+    }
+
+    function getTournamentInfo(uint256 tid)
+        external
+        view
+        returns (
+            address creator,
+            uint256 entryFee,
+            uint8 maxPlayers,
+            uint8 rounds,
+            PayoutScheme scheme,
+            TournamentState state,
+            uint256 prizePool,
+            address firstPlace,
+            address secondPlace,
+            address thirdPlace
+        )
+    {
+        Tournament storage t = tournaments[tid];
+        return (
+            t.creator,
+            t.entryFee,
+            t.maxPlayers,
+            t.rounds,
+            t.scheme,
+            t.state,
+            t.prizePool,
+            t.firstPlace,
+            t.secondPlace,
+            t.thirdPlace
+        );
+    }
+
+    function getTournamentSlotWinner(uint256 tid, uint8 round, uint16 slot)
+        external
+        view
+        returns (address)
+    {
+        return tournaments[tid].slotWinner[round][slot];
+    }
+
+    function tournamentCount() external view returns (uint256) {
+        return nextTournamentId - 1;
+    }
+
+    // ---------------------------------------------------------------------
+    // Internal helpers
+    // ---------------------------------------------------------------------
+
+    function _log2(uint8 n) internal pure returns (uint8) {
+        uint8 r = 0;
+        while (n > 1) {
+            n >>= 1;
+            r++;
+        }
+        return r;
+    }
+
+    function _nextPow2(uint8 n) internal pure returns (uint8) {
+        if (n <= 1) return 1;
+        n--;
+        n |= n >> 1;
+        n |= n >> 2;
+        n |= n >> 4;
+        return n + 1;
     }
 }
