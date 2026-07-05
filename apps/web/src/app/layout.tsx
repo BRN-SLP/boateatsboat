@@ -8,8 +8,8 @@ import { WalletProvider } from "@/components/wallet-provider"
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'boateatsboat',
-  description: 'A new Celo blockchain project',
+  title: 'BoatEatsBoat',
+  description: 'On-chain battleship in a bathtub. Plastic ships, rubber ducks, real Celo duels.',
 };
 
 export default function RootLayout({
