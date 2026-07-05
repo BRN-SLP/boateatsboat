@@ -105,7 +105,20 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
   // Finished
   const iWon = game.winner.toLowerCase() === myAddress?.toLowerCase();
   return (
-    <div className="p-8 text-center">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="p-8 text-center flex flex-col items-center gap-4"
+    >
+      <motion.div
+        initial={{ scale: 0, rotate: -30 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: "spring", stiffness: 200, damping: 14 }}
+        className="text-6xl"
+        aria-hidden
+      >
+        {iWon ? "🏆" : "🛁"}
+      </motion.div>
       <motion.h2
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -113,10 +126,30 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
       >
         {iWon ? "Admiral of the Tub" : "Your fleet is now bath toys."}
       </motion.h2>
-      <p className="mt-2 text-slate-500">
+      <p className="text-slate-500">
         {iWon ? "The rubber ducks salute you." : "Drain and try again."}
       </p>
-    </div>
+      <a
+        href="/play"
+        className="mt-3 inline-flex items-center rounded-md bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-700"
+      >
+        Sail again
+      </a>
+      {/* Celebratory duck wobble on win */}
+      {iWon && (
+        <div className="flex justify-center gap-6 text-2xl mt-2" aria-hidden>
+          {[0, 0.3, 0.6].map((d, i) => (
+            <motion.span
+              key={i}
+              animate={{ rotate: [-8, 8, -8], y: [0, -4, 0] }}
+              transition={{ repeat: Infinity, duration: 1.6, delay: d, ease: "easeInOut" }}
+            >
+              🦆
+            </motion.span>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 }
 

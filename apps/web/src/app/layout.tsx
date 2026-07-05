@@ -10,6 +10,11 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'BoatEatsBoat',
   description: 'On-chain battleship in a bathtub. Plastic ships, rubber ducks, real Celo duels.',
+  openGraph: {
+    title: 'BoatEatsBoat',
+    description: 'On-chain battleship in a bathtub. Plastic ships, rubber ducks, real Celo duels.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
