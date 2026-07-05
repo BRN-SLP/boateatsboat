@@ -88,6 +88,10 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(address => uint32) public wins;
     mapping(address => uint32) public losses;
 
+    // Armor tracking: how many confirmed hits each cell of a defender has absorbed.
+    // Keyed by (gameId, defenderIdx, cellIndex). Battleship (hp=2) needs 2 hits to sink.
+    mapping(uint256 => mapping(uint8 => mapping(uint16 => uint8))) public cellHits;
+
     // ---------------------------------------------------------------------
     // Events
     // ---------------------------------------------------------------------
@@ -97,7 +101,17 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     event BoardCommitted(uint256 indexed gameId, uint8 indexed playerIdx);
     event GameStarted(uint256 indexed gameId, uint8 firstTurn);
     event ShotFired(uint256 indexed gameId, uint8 indexed shooterIdx, uint8 x, uint8 y);
-    event ShotResolved(uint256 indexed gameId, uint8 indexed defenderIdx, uint8 x, uint8 y, bool hit, bool sunk);
+    event ShotResolved(
+        uint256 indexed gameId,
+        uint8 indexed defenderIdx,
+        uint8 x,
+        uint8 y,
+        uint8 cellType,
+        bool hit,
+        bool armored,
+        bool stealth,
+        bool sunk
+    );
     event GameFinished(uint256 indexed gameId, address indexed winner, bool byForfeit);
     event WagerClaimed(uint256 indexed gameId, address indexed winner, uint256 amount);
 
@@ -230,21 +244,28 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         }
 
         bool hit = (cellType != TYPE_WATER);
+        bool armored = (cellType >= TYPE_SHIP_HP2 && cellType < TYPE_SUB_STEALTH);
+        bool stealth = _isStealth(cellType);
         bool sunk = false;
 
         if (hit) {
-            // Simple model: hp=1 cells sink on first hit; hp=2 (armor) need a second fire.
-            // For v1 we count a hit as destroying one cell. Armor is tracked off-ring
-            // via repeated proofs on the same cell (cellType stays hp=2 until second).
-            // Here a non-water cell is considered destroyed on this shot.
-            g.players[defenderIdx].cellsRemaining -= 1;
+            uint16 cellIndex = uint16(uint16(ps.y) * BOARD_SIZE + ps.x);
+            uint8 hp = _cellHp(cellType);
+            uint8 already = cellHits[gameId][defenderIdx][cellIndex];
+            if (already + 1 >= hp) {
+                // Cell destroyed. Only now does it leave the defender's remaining count.
+                g.players[defenderIdx].cellsRemaining -= 1;
+                sunk = (g.players[defenderIdx].cellsRemaining == 0);
+            } else {
+                // Armored cell wounded but not yet destroyed; remember the hit.
+                cellHits[gameId][defenderIdx][cellIndex] = already + 1;
+            }
             g.players[ps.shooterIdx].shotsHit += 1;
-            sunk = (g.players[defenderIdx].cellsRemaining == 0);
         }
 
         delete pendingShots[gameId];
         g.lastActionAt = block.timestamp;
-        emit ShotResolved(gameId, defenderIdx, ps.x, ps.y, hit, sunk);
+        emit ShotResolved(gameId, defenderIdx, ps.x, ps.y, cellType, hit, armored, stealth, sunk);
 
         if (sunk || _allShipsSunk(g)) {
             _finishGame(gameId, ps.shooterIdx, false);
