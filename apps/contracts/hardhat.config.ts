@@ -1,5 +1,6 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
+import "@openzeppelin/hardhat-upgrades";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -19,7 +20,7 @@ const config: HardhatUserConfig = {
       chainId: 42220,
     },
     // Celo Sepolia Testnet
-    celo-sepolia: {
+    "celo-sepolia": {
       url: "https://forno.celo-sepolia.celo-testnet.org/",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11142220,
@@ -32,15 +33,15 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      celo: process.env.ETHERSCAN_API_KEY || "",
-      celo-sepolia: process.env.ETHERSCAN_API_KEY || "",
+      celo: process.env.ETHERSCAN_API_KEY || "celo",
+      "celo-sepolia": process.env.ETHERSCAN_API_KEY || "celo",
     },
     customChains: [
       {
         network: "celo",
         chainId: 42220,
         urls: {
-          apiURL: "https://api.etherscan.io/v2/api",
+          apiURL: "https://api.celoscan.io/api",
           browserURL: "https://celoscan.io",
         },
       },
@@ -48,7 +49,7 @@ const config: HardhatUserConfig = {
         network: "celo-sepolia",
         chainId: 11142220,
         urls: {
-          apiURL: "https://api.etherscan.io/v2/api",
+          apiURL: "https://api-sepolia.celoscan.io/api",
           browserURL: "https://sepolia.celoscan.io/",
         },
       },
