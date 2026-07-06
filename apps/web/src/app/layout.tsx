@@ -8,12 +8,18 @@ import { WalletProvider } from "@/components/wallet-provider"
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://boateatsboat.vercel.app'),
   title: 'BoatEatsBoat',
   description: 'On-chain battleship in a bathtub. Plastic ships, rubber ducks, real Celo duels.',
   openGraph: {
     title: 'BoatEatsBoat',
     description: 'On-chain battleship in a bathtub. Plastic ships, rubber ducks, real Celo duels.',
     type: 'website',
+    images: ['/og.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og.png'],
   },
 };
 

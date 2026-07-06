@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, ExternalLink } from "lucide-react"
+import { Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,9 +15,8 @@ import { ConnectButton } from "@/components/connect-button"
 
 const navLinks = [
   { name: "Home", href: "/" },
-  { name: "Play", href: "/play" },
-  { name: "Leaderboard", href: "/leaderboard" },
-  { name: "Docs", href: "https://docs.celo.org", external: true },
+  { name: "Arena", href: "/play" },
+  { name: "About", href: "/#how" },
 ]
 
 export function Navbar() {
@@ -47,14 +46,11 @@ export function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    target={link.external ? "_blank" : undefined}
-                    rel={link.external ? "noopener noreferrer" : undefined}
                     className={`flex items-center gap-2 text-base font-medium transition-colors hover:text-primary ${
                       pathname === link.href ? "text-foreground" : "text-foreground/70"
                     }`}
                   >
                     {link.name}
-                    {link.external && <ExternalLink className="h-4 w-4" />}
                   </Link>
                 ))}
                 <div className="mt-6 pt-6 border-t">
@@ -81,8 +77,6 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              target={link.external ? "_blank" : undefined}
-              rel={link.external ? "noopener noreferrer" : undefined}
               className={`flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-primary ${
                 pathname === link.href
                   ? "text-foreground"
@@ -90,7 +84,6 @@ export function Navbar() {
               }`}
             >
               {link.name}
-              {link.external && <ExternalLink className="h-4 w-4" />}
             </Link>
           ))}
           
