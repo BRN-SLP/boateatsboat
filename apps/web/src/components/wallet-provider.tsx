@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { WagmiProvider, createConfig, http, useConnect } from "wagmi";
 import { celo, celoSepolia } from "wagmi/chains";
 import { ConnectButton } from "./connect-button";
+import { useMiniPay } from "@/hooks/use-minipay";
 
 const connectors = connectorsForWallets(
   [
@@ -36,17 +37,18 @@ const queryClient = new QueryClient();
 
 function WalletProviderInner({ children }: { children: React.ReactNode }) {
   const { connect, connectors } = useConnect();
+  const inMiniPay = useMiniPay();
 
   useEffect(() => {
-    // Check if the app is running inside MiniPay
-    if (window.ethereum && window.ethereum.isMiniPay) {
-      // Find the injected connector, which is what MiniPay uses
+    // Inside MiniPay the wallet is injected and we connect it implicitly
+    // via the injected connector.
+    if (inMiniPay) {
       const injectedConnector = connectors.find((c) => c.id === "injected");
       if (injectedConnector) {
         connect({ connector: injectedConnector });
       }
     }
-  }, [connect, connectors]);
+  }, [inMiniPay, connect, connectors]);
 
   return <>{children}</>;
 }
