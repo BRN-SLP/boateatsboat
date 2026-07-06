@@ -1,49 +1,78 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Flame, Anchor, Shield, Waves } from "lucide-react";
+import { Flame, Anchor, Shield, Waves, Play } from "lucide-react";
 
 export default function Home() {
   return (
     <main className="flex-1">
-      {/* Hero */}
-      <section className="relative py-20 lg:py-32 overflow-hidden">
-        {/* Soft bathtub-of-water gradient backdrop */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-sky-50 via-cream to-rose-50" />
-        <div className="absolute inset-0 -z-10 opacity-30 [background:radial-gradient(circle_at_30%_20%,rgba(255,200,150,0.4),transparent_40%),radial-gradient(circle_at_70%_60%,rgba(150,200,255,0.4),transparent_40%)]" />
+      {/* Hero with the user-designed Bathtub Arena artwork as backdrop */}
+      <section className="relative min-h-[100svh] overflow-hidden">
+        {/* Artwork: fills the viewport, slight scale to cover widescreens */}
+        <img
+          src="/hero.webp"
+          alt="Bathtub Arena: two toy fleets face off across a bubbly bathtub"
+          className="absolute inset-0 h-full w-full object-cover"
+          fetchPriority="high"
+          // loading eager because it is the first paint
+        />
 
-        <div className="container px-4 mx-auto max-w-5xl text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 mb-8 text-sm font-medium bg-rose-100 text-rose-700 rounded-full border border-rose-200">
+        {/* Top scrim so the sticky navbar reads cleanly over the busy art */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/55 to-transparent"
+        />
+        {/* Bottom scrim so the CTA + meta strip read cleanly */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/70 via-black/25 to-transparent"
+        />
+
+        {/* Centered content column over the soap */}
+        <div className="relative z-10 flex min-h-[100svh] flex-col items-center justify-center px-4 text-center">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/30 bg-black/35 px-3 py-1 text-sm font-medium text-amber-100 backdrop-blur-sm">
             <Flame className="h-4 w-4" />
             On-chain battleship. Bathtub edition.
           </div>
 
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-slate-800">
-            Boat eats{" "}
-            <span className="bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 bg-clip-text text-transparent">
-              boat
-            </span>
+          {/* Mockup-style title: small kicker line over a big block wordmark */}
+          <h1 className="mb-3 text-sm font-semibold uppercase tracking-[0.4em] text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]">
+            Bathtub Arena:
           </h1>
+          <h2 className="mb-10 text-5xl font-black uppercase leading-[0.9] tracking-tight text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.75)] sm:text-7xl lg:text-8xl">
+            Boat<span className="text-amber-300">Eats</span>Boat
+          </h2>
 
-          <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="mb-10 max-w-xl text-base text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)] sm:text-lg">
             Plastic ships. Rubber ducks. Real on-chain duels. Commit your fleet with a
-            Merkle root, fire shots, and prove every hit. The AI agent is always ready to play.
+            Merkle root, fire shots, prove every hit. The AI agent is always ready to play.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+          <div className="flex flex-col gap-4 sm:flex-row">
             <Link href="/play">
-              <Button size="lg" className="px-8 py-3 text-base font-medium">
-                Play a duel
+              <Button
+                size="lg"
+                className="group gap-2 rounded-full bg-amber-400 px-10 py-6 text-base font-bold uppercase tracking-wide text-slate-900 shadow-lg shadow-amber-500/30 transition hover:bg-amber-300 hover:shadow-amber-400/50"
+              >
+                <Play className="h-5 w-5 fill-current transition group-hover:scale-110" />
+                Play Now
               </Button>
             </Link>
             <Link href="/leaderboard">
-              <Button size="lg" variant="outline" className="px-8 py-3 text-base font-medium">
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full border-white/40 bg-white/10 px-8 py-6 text-base font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+              >
                 Leaderboard
               </Button>
             </Link>
           </div>
 
-          {/* Tiny duck audience wobble */}
-          <div className="flex justify-center gap-8 text-3xl select-none" aria-hidden>
+          {/* Tiny duck audience wobble (kept from earlier draft) */}
+          <div
+            className="mt-12 flex select-none justify-center gap-8 text-3xl"
+            aria-hidden
+          >
             <DuckWobble delay={0} />
             <DuckWobble delay={0.4} />
             <DuckWobble delay={0.8} />
@@ -52,9 +81,9 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="py-16 border-t border-slate-100">
-        <div className="container px-4 mx-auto max-w-5xl">
-          <h2 className="text-2xl font-bold text-center text-slate-800 mb-12">
+      <section id="how" className="scroll-mt-16 border-t border-slate-100 bg-amber-50/40 py-16">
+        <div className="container mx-auto max-w-5xl px-4">
+          <h2 className="mb-12 text-center text-2xl font-bold text-slate-800">
             How the tub works
           </h2>
           <div className="grid gap-8 md:grid-cols-3">
@@ -78,10 +107,12 @@ export default function Home() {
       </section>
 
       {/* Tech strip */}
-      <section className="py-12 bg-slate-50 border-t border-slate-100">
-        <div className="container px-4 mx-auto max-w-5xl text-center">
+      <section className="border-t border-slate-100 bg-slate-50 py-12">
+        <div className="container mx-auto max-w-5xl text-center">
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-slate-500">
-            <span className="inline-flex items-center gap-1.5"><Waves className="h-4 w-4" /> Celo</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Waves className="h-4 w-4" /> Celo
+            </span>
             <span>·</span>
             <span>UUPS upgradeable</span>
             <span>·</span>
@@ -110,7 +141,7 @@ function Step({
     <div className="flex flex-col items-start gap-3 text-left">
       <div className="rounded-full bg-rose-100 p-3 text-rose-600">{icon}</div>
       <h3 className="font-semibold text-slate-800">{title}</h3>
-      <p className="text-sm text-slate-600 leading-relaxed">{body}</p>
+      <p className="text-sm leading-relaxed text-slate-600">{body}</p>
     </div>
   );
 }
