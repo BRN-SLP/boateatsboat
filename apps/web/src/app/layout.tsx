@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Inter, Permanent_Marker, Creepster } from 'next/font/google';
 import './globals.css';
 
-import { ConditionalNavbar } from '@/components/conditional-navbar';
 import { WalletProvider } from "@/components/wallet-provider"
 
 const inter = Inter({ subsets: ['latin'] });
@@ -36,7 +35,6 @@ export default function RootLayout({
         {/* Navbar is included on all pages */}
         <div className="relative flex h-screen flex-col overflow-hidden">
           <WalletProvider>
-            <ConditionalNavbar />
             <main className="flex-1 overflow-hidden">
               {children}
             </main>
