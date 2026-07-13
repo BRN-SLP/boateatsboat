@@ -68,7 +68,7 @@ export default function Home() {
                     stroke-linejoin="round"
                   />
                 </svg>
-                <span className="relative z-10 block w-20 -rotate-[15deg] text-center font-marker text-sm font-bold uppercase leading-tight text-black">
+                <span className="relative z-10 block w-16 -rotate-[15deg] text-center font-marker text-xs font-bold uppercase leading-tight text-black">
                   Connect
                   <br />
                   Wallet
