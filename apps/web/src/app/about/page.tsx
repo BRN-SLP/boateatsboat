@@ -1,98 +1,115 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Anchor, Flame, Shield, Waves, ArrowLeft } from "lucide-react";
+import { Anchor, Flame, Shield } from "lucide-react";
 
 export default function AboutPage() {
   return (
-    <main className="flex-1 bg-[#A8D8EA]">
-      <section className="container mx-auto max-w-3xl px-4 py-16">
-        <Link href="/">
-          <Button variant="ghost" className="mb-8 gap-2">
-            <ArrowLeft className="h-4 w-4" /> Back to Arena
-          </Button>
-        </Link>
+    <main className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-gray-900">
+      <div className="relative aspect-video h-full max-h-screen w-full overflow-hidden bg-[#A8D8EA] shadow-2xl">
+        {/* UI Layer */}
+        <div className="absolute inset-0 flex h-full w-full flex-col p-6">
+          {/* Top: Nav + Title */}
+          <div className="flex items-start justify-between">
+            <nav className="flex w-28 flex-col gap-2 pl-2 pt-2">
+              <Link href="/" className="sticker-btn doodle-border doodle-shadow -rotate-6 origin-bottom-right bg-white px-3 py-1.5 text-center font-marker text-lg uppercase tracking-wider">
+                Home
+              </Link>
+              <Link href="/play" className="sticker-btn doodle-border doodle-shadow rotate-3 origin-center bg-white px-3 py-1.5 text-center font-marker text-lg uppercase tracking-wider">
+                Arena
+              </Link>
+              <Link href="/about" className="sticker-btn doodle-border doodle-shadow -rotate-2 origin-top-left bg-[#d33a30] px-3 py-1.5 text-center font-marker text-lg uppercase tracking-wider text-white">
+                About
+              </Link>
+            </nav>
 
-        <h1 className="mb-2 text-4xl font-black uppercase tracking-tight text-black">
-          How the Tub Works
-        </h1>
-        <p className="mb-12 text-lg text-black/70">
-          Plastic ships. Rubber ducks. Real on-chain duels.
-        </p>
+            <header className="flex flex-1 flex-col items-center justify-start pt-2">
+              <h1 className="text-center font-creepster text-4xl leading-tight tracking-widest text-[#1a1a1a] md:text-5xl lg:text-6xl">
+                HOW THE TUB WORKS
+              </h1>
+              <p className="mt-1 font-marker text-sm text-[#1a1a1a]/70">
+                Plastic ships. Rubber ducks. Real on-chain duels.
+              </p>
+            </header>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          <Step
-            icon={<Anchor className="h-6 w-6" />}
-            title="Place your fleet"
-            body="Carrier, armored Battleship, Cruiser, and a stealth Submarine. Your layout is committed as a Merkle root -- opponents cannot peek."
-          />
-          <Step
-            icon={<Flame className="h-6 w-6" />}
-            title="Fire and prove"
-            body="Take turns firing. The defender answers each shot with a cryptographic proof of hit or miss. Lying is impossible."
-          />
-          <Step
-            icon={<Shield className="h-6 w-6" />}
-            title="Win or drain"
-            body="Sink every enemy cell. Battleship armor absorbs one hit; submarines hide in silence. Last fleet afloat wins."
-          />
+            <div className="w-28" />
+          </div>
+
+          {/* Scrollable content area */}
+          <div className="doodle-border doodle-shadow mt-4 flex-1 overflow-y-auto bg-[#F9F7F2] p-6">
+            {/* Steps */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Step
+                icon={<Anchor className="h-5 w-5" />}
+                title="Place your fleet"
+                body="Carrier, armored Battleship, Cruiser, and a stealth Submarine. Your layout is committed as a Merkle root — opponents cannot peek."
+              />
+              <Step
+                icon={<Flame className="h-5 w-5" />}
+                title="Fire and prove"
+                body="Take turns firing. The defender answers each shot with a cryptographic proof of hit or miss. Lying is impossible."
+              />
+              <Step
+                icon={<Shield className="h-5 w-5" />}
+                title="Win or drain"
+                body="Sink every enemy cell. Battleship armor absorbs one hit; submarines hide in silence. Last fleet afloat wins."
+              />
+            </div>
+
+            {/* Fleet spec */}
+            <h2 className="mb-3 mt-6 font-marker text-xl uppercase text-[#1a1a1a]">Your Fleet</h2>
+            <div className="doodle-border overflow-hidden bg-white">
+              <table className="w-full text-left">
+                <thead className="bg-[#1a1a1a]/5">
+                  <tr>
+                    <th className="px-3 py-2 font-marker text-xs uppercase text-[#1a1a1a]">Ship</th>
+                    <th className="px-3 py-2 font-marker text-xs uppercase text-[#1a1a1a]">Cells</th>
+                    <th className="px-3 py-2 font-marker text-xs uppercase text-[#1a1a1a]">HP</th>
+                    <th className="px-3 py-2 font-marker text-xs uppercase text-[#1a1a1a]">Special</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1a1a1a]/10">
+                  <tr>
+                    <td className="px-3 py-2 font-marker text-sm">Carrier</td>
+                    <td className="px-3 py-2 text-sm">5</td>
+                    <td className="px-3 py-2 text-sm">1</td>
+                    <td className="px-3 py-2 text-sm text-[#1a1a1a]/50">—</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-marker text-sm">Battleship</td>
+                    <td className="px-3 py-2 text-sm">4</td>
+                    <td className="px-3 py-2 text-sm">2 (armor)</td>
+                    <td className="px-3 py-2 text-sm text-[#1a1a1a]/50">Survives first hit</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-marker text-sm">Cruiser</td>
+                    <td className="px-3 py-2 text-sm">3</td>
+                    <td className="px-3 py-2 text-sm">1</td>
+                    <td className="px-3 py-2 text-sm text-[#1a1a1a]/50">—</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-marker text-sm">Submarine</td>
+                    <td className="px-3 py-2 text-sm">3</td>
+                    <td className="px-3 py-2 text-sm">1</td>
+                    <td className="px-3 py-2 text-sm text-[#1a1a1a]/50">Stealth (hidden until hit)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Tech strip */}
+            <div className="mt-5 flex flex-wrap justify-center gap-x-4 gap-y-1 font-marker text-xs uppercase tracking-wider text-[#1a1a1a]/50">
+              <span>Celo</span>
+              <span>·</span>
+              <span>UUPS upgradeable</span>
+              <span>·</span>
+              <span>Merkle proofs</span>
+              <span>·</span>
+              <span>MiniPay-ready</span>
+              <span>·</span>
+              <span>Open source</span>
+            </div>
+          </div>
         </div>
-
-        {/* Fleet spec */}
-        <h2 className="mb-6 mt-16 text-2xl font-bold text-black">Your Fleet</h2>
-        <div className="overflow-hidden rounded-xl border-2 border-black bg-[#F9F7F2]">
-          <table className="w-full text-left">
-            <thead className="bg-black/5">
-              <tr>
-                <th className="px-4 py-3 font-bold uppercase text-sm text-black">Ship</th>
-                <th className="px-4 py-3 font-bold uppercase text-sm text-black">Cells</th>
-                <th className="px-4 py-3 font-bold uppercase text-sm text-black">HP</th>
-                <th className="px-4 py-3 font-bold uppercase text-sm text-black">Special</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/10">
-              <tr>
-                <td className="px-4 py-3 font-medium">Carrier</td>
-                <td className="px-4 py-3">5</td>
-                <td className="px-4 py-3">1</td>
-                <td className="px-4 py-3 text-black/60">--</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-medium">Battleship</td>
-                <td className="px-4 py-3">4</td>
-                <td className="px-4 py-3">2 (armor)</td>
-                <td className="px-4 py-3 text-black/60">Survives first hit</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-medium">Cruiser</td>
-                <td className="px-4 py-3">3</td>
-                <td className="px-4 py-3">1</td>
-                <td className="px-4 py-3 text-black/60">--</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 font-medium">Submarine</td>
-                <td className="px-4 py-3">3</td>
-                <td className="px-4 py-3">1</td>
-                <td className="px-4 py-3 text-black/60">Stealth (hidden until hit)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Tech strip */}
-        <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-black/60">
-          <span className="inline-flex items-center gap-1.5">
-            <Waves className="h-4 w-4" /> Celo
-          </span>
-          <span>·</span>
-          <span>UUPS upgradeable</span>
-          <span>·</span>
-          <span>Merkle proofs</span>
-          <span>·</span>
-          <span>MiniPay-ready</span>
-          <span>·</span>
-          <span>Open source</span>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }
@@ -107,12 +124,14 @@ function Step({
   body: string;
 }) {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-xl border-2 border-black bg-[#F9F7F2] p-5 text-left">
-      <div className="rounded-full border-2 border-black bg-[#DF4949] p-3 text-white">
-        {icon}
+    <div className="doodle-border flex flex-col items-start gap-2 bg-white p-4">
+      <div className="flex items-center gap-2">
+        <div className="rounded-full border-2 border-[#1a1a1a] bg-[#DF4949] p-2 text-white">
+          {icon}
+        </div>
+        <h3 className="font-marker text-base uppercase text-[#1a1a1a]">{title}</h3>
       </div>
-      <h3 className="font-bold text-black">{title}</h3>
-      <p className="text-sm leading-relaxed text-black/70">{body}</p>
+      <p className="text-xs leading-relaxed text-[#1a1a1a]/70">{body}</p>
     </div>
   );
 }

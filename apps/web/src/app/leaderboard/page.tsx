@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAccount, usePublicClient } from "wagmi";
 import { type Address } from "viem";
 import { gameAbi } from "@/lib/game-abi";
 import { gameProxyFor } from "@/lib/game-config";
 import { motion } from "framer-motion";
-import { Trophy, Flame } from "lucide-react";
+import { Flame } from "lucide-react";
 
 interface Row {
   player: string;
@@ -21,7 +22,6 @@ export default function LeaderboardPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Leaderboard is read off recent GameFinished events (winners + losers seen).
   useEffect(() => {
     if (!publicClient || !chain) {
       setLoading(false);
@@ -31,7 +31,6 @@ export default function LeaderboardPage() {
     const run = async () => {
       try {
         const proxy = gameProxyFor(chain.id);
-        // Read GameFinished events from the last ~5000 blocks.
         const block = await publicClient.getBlockNumber();
         const from = block > 5000n ? block - 5000n : 0n;
         const logs = await publicClient.getLogs({
@@ -43,18 +42,12 @@ export default function LeaderboardPage() {
         const tally = new Map<string, { wins: number; losses: number; seen: boolean }>();
         for (const l of logs) {
           const winner = (l.args.winner ?? "").toLowerCase();
-          const byForfeit = l.args.byForfeit;
-          // GameFinished(uint256 indexed gameId, address indexed winner, bool byForfeit)
           if (winner) {
             const e = tally.get(winner) ?? { wins: 0, losses: 0, seen: true };
             e.wins += 1;
             tally.set(winner, e);
           }
-          // Loser is implicit (the other player); we cannot derive it from the event alone,
-          // so the leaderboard is win-count + ELO (read separately). Losses stay 0 here.
-          void byForfeit;
         }
-        // Read ELO for each winner and assemble rows.
         const addresses = Array.from(tally.keys()) as Address[];
         const eloReads = await Promise.all(
           addresses.map((a) =>
@@ -92,7 +85,7 @@ export default function LeaderboardPage() {
         assembled.sort((x, y) => y.elo - x.elo || y.wins - x.wins);
         setRows(assembled);
       } catch {
-        // ignore -- empty leaderboard is fine
+        // ignore
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -104,50 +97,80 @@ export default function LeaderboardPage() {
   }, [publicClient, chain]);
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-12">
-      <div className="flex items-center gap-3 mb-8">
-        <Trophy className="h-7 w-7 text-amber-500" />
-        <h1 className="text-3xl font-bold text-slate-800">Admirals of the Tub</h1>
-      </div>
-      <p className="text-slate-500 mb-8 text-sm">
-        Ranked by ELO. Earned in real on-chain duels -- no farming, just fleet.
-      </p>
+    <main className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-gray-900">
+      <div className="relative aspect-video h-full max-h-screen w-full overflow-hidden bg-[#A8D8EA] shadow-2xl">
+        <div className="absolute inset-0 flex h-full w-full flex-col p-6">
+          {/* Top: Nav + Title */}
+          <div className="flex items-start justify-between">
+            <nav className="flex w-28 flex-col gap-2 pl-2 pt-2">
+              <Link href="/" className="sticker-btn doodle-border doodle-shadow -rotate-6 origin-bottom-right bg-white px-3 py-1.5 text-center font-marker text-lg uppercase tracking-wider">
+                Home
+              </Link>
+              <Link href="/play" className="sticker-btn doodle-border doodle-shadow rotate-3 origin-center bg-white px-3 py-1.5 text-center font-marker text-lg uppercase tracking-wider">
+                Arena
+              </Link>
+              <Link href="/about" className="sticker-btn doodle-border doodle-shadow -rotate-2 origin-top-left bg-white px-3 py-1.5 text-center font-marker text-lg uppercase tracking-wider">
+                About
+              </Link>
+            </nav>
 
-      {loading ? (
-        <p className="text-slate-400 text-sm">Rounding up the ducks...</p>
-      ) : rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-200 p-10 text-center">
-          <p className="text-slate-500 text-sm">
-            No admirals yet. <a href="/play" className="text-rose-600 underline">Be the first.</a>
-          </p>
+            <header className="flex flex-1 flex-col items-center justify-start pt-2">
+              <h1 className="text-center font-creepster text-4xl leading-tight tracking-widest text-[#1a1a1a] md:text-5xl lg:text-6xl">
+                ADMIRALS OF THE TUB
+              </h1>
+              <p className="mt-1 font-marker text-sm text-[#1a1a1a]/70">
+                Ranked by ELO · Earned in real on-chain duels
+              </p>
+            </header>
+
+            <div className="w-28" />
+          </div>
+
+          {/* Scrollable leaderboard list */}
+          <div className="doodle-border doodle-shadow mt-4 flex-1 overflow-y-auto bg-[#F9F7F2] p-4">
+            {loading ? (
+              <p className="font-marker text-sm uppercase text-[#1a1a1a]/50">
+                Rounding up the ducks...
+              </p>
+            ) : rows.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3">
+                <p className="font-marker text-sm uppercase text-[#1a1a1a]/50">
+                  No admirals yet.
+                </p>
+                <Link href="/play" className="play-btn doodle-shadow-large rounded-2xl border-[3px] border-[#1a1a1a] bg-[#d33a30] px-6 py-2 font-marker text-lg uppercase tracking-wider text-white">
+                  Be the first
+                </Link>
+              </div>
+            ) : (
+              <ol className="flex flex-col gap-2">
+                {rows.map((r, i) => (
+                  <motion.li
+                    key={r.player}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className="doodle-border flex items-center justify-between bg-white px-4 py-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-marker text-sm text-[#1a1a1a]/40">#{i + 1}</span>
+                      <span className="font-mono text-sm text-[#1a1a1a]">
+                        {shortAddr(r.player)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="inline-flex items-center gap-1 font-marker text-sm text-[#DF4949]">
+                        <Flame className="h-3.5 w-3.5" /> {r.wins}
+                      </span>
+                      <span className="font-mono text-sm text-[#1a1a1a]/60">ELO {r.elo}</span>
+                    </div>
+                  </motion.li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
-      ) : (
-        <ol className="flex flex-col gap-2">
-          {rows.map((r, i) => (
-            <motion.li
-              key={r.player}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-mono text-slate-400 w-6">#{i + 1}</span>
-                <span className="font-mono text-sm text-slate-700">
-                  {shortAddr(r.player)}
-                </span>
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                <span className="inline-flex items-center gap-1 text-amber-600">
-                  <Flame className="h-3.5 w-3.5" /> {r.wins}
-                </span>
-                <span className="font-mono text-slate-500">ELO {r.elo}</span>
-              </div>
-            </motion.li>
-          ))}
-        </ol>
-      )}
-    </div>
+      </div>
+    </main>
   );
 }
 
