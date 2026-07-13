@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { BOARD_SIZE } from "@/lib/game-config";
 import { BoardCell, type CellVisual } from "./cell";
-import { ShipOverlay, extractShipRuns, type ShipRun } from "./ship-overlay";
+import { ShipOverlay, extractShipRuns, type ShipRun, type FleetColor } from "./ship-overlay";
 import { cn } from "@/lib/utils";
 
 export interface BoardState {
@@ -22,6 +22,7 @@ export function Board({
   previewCells,
   compact,
   shipTypes,
+  fleet = "blue",
 }: {
   state: BoardState;
   theme: "inferno" | "classic";
@@ -31,6 +32,7 @@ export function Board({
   previewCells?: Set<number>;
   compact?: boolean;
   shipTypes?: number[];
+  fleet?: FleetColor;
 }) {
   const colLetters = "ABCDEFGHIJ";
   const cellAreaRef = useRef<HTMLDivElement>(null);
@@ -101,7 +103,7 @@ export function Board({
           </div>
           {/* Ship silhouettes overlay */}
           {ships.length > 0 && (
-            <ShipOverlay ships={ships} cellSize={cellSize} gap={gap} />
+            <ShipOverlay ships={ships} cellSize={cellSize} gap={gap} fleet={fleet} />
           )}
         </div>
       </div>

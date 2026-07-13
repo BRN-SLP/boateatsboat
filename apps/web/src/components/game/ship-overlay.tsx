@@ -11,12 +11,23 @@ const TYPE_LABELS = {
   4: "submarine",
 } as const;
 
-const TYPE_COLORS = {
-  1: SHIP_COLORS.blue,
-  2: SHIP_COLORS.navy,
-  3: SHIP_COLORS.teal,
-  4: SHIP_COLORS.yellowGreen,
+// Two fleet color schemes — blue family for player, green family for enemy.
+const FLEET_PALETTES = {
+  blue: {
+    1: SHIP_COLORS.blue,       // Carrier — bright blue
+    2: SHIP_COLORS.navy,       // Battleship — dark navy
+    3: SHIP_COLORS.teal,       // Cruiser — teal
+    4: "#5B9BD5",              // Submarine — lighter blue
+  },
+  green: {
+    1: SHIP_COLORS.green,      // Carrier — army green
+    2: "#3E5B23",              // Battleship — dark olive
+    3: SHIP_COLORS.yellowGreen,// Cruiser — yellow-green
+    4: "#6B8E4E",              // Submarine — sage
+  },
 } as const;
+
+export type FleetColor = keyof typeof FLEET_PALETTES;
 
 export interface ShipRun {
   type: number; // 1-4
@@ -79,12 +90,15 @@ export function ShipOverlay({
   ships,
   cellSize,
   gap = 2,
+  fleet = "blue",
 }: {
   ships: ShipRun[];
   cellSize: number;
   gap?: number;
+  fleet?: FleetColor;
 }) {
   const step = cellSize + gap;
+  const palette = FLEET_PALETTES[fleet];
 
   return (
     <div className="pointer-events-none absolute inset-0">
@@ -92,7 +106,7 @@ export function ShipOverlay({
         const left = ship.startX * step;
         const top = ship.startY * step;
         const label = TYPE_LABELS[ship.type as keyof typeof TYPE_LABELS] ?? "carrier";
-        const color = TYPE_COLORS[ship.type as keyof typeof TYPE_COLORS] ?? SHIP_COLORS.blue;
+        const color = palette[ship.type as 1 | 2 | 3 | 4] ?? SHIP_COLORS.blue;
 
         return (
           <div

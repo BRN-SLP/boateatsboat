@@ -352,6 +352,7 @@ function ActiveBattle({
         board={ownBoard}
         theme={theme}
         shipTypes={placement?.types}
+        fleet="blue"
       />
     </div>
   );
@@ -365,6 +366,7 @@ function BoardColumn({
   clickable,
   onCellClick,
   shipTypes,
+  fleet = "blue",
 }: {
   title: string;
   subtitle: string;
@@ -373,6 +375,7 @@ function BoardColumn({
   clickable?: boolean;
   onCellClick?: (x: number, y: number) => void;
   shipTypes?: number[];
+  fleet?: "blue" | "green";
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -380,7 +383,7 @@ function BoardColumn({
         <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
         <span className="text-[10px] text-slate-400">{subtitle}</span>
       </div>
-      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} />
+      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} />
     </div>
   );
 }
