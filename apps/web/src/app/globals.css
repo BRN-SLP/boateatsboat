@@ -87,6 +87,64 @@
   }
 }
 
+/* --- Doodle Zine utilities (from Stitch redesign) --- */
+.font-marker { font-family: var(--font-marker), cursive; }
+.font-creepster { font-family: var(--font-creepster), system-ui; }
+
+.doodle-border {
+  border: 3px solid #1a1a1a;
+  border-radius: 4px 12px 6px 14px;
+}
+
+.doodle-shadow {
+  box-shadow: 4px 4px 0px #1a1a1a;
+}
+
+.doodle-shadow-large {
+  box-shadow: 6px 8px 0px #1a1a1a;
+}
+
+.sticker-btn {
+  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+}
+.sticker-btn:hover {
+  transform: scale(1.05) rotate(0deg) !important;
+  z-index: 10;
+}
+.sticker-btn:active {
+  transform: scale(0.95) translate(2px, 2px) !important;
+  box-shadow: 2px 2px 0px #1a1a1a;
+}
+
+.play-btn {
+  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+}
+.play-btn:hover {
+  transform: scale(1.02);
+}
+.play-btn:active {
+  transform: translateY(4px);
+  box-shadow: 2px 4px 0px #1a1a1a;
+}
+
+.star-btn {
+  transition: transform 0.1s ease-in-out;
+}
+.star-btn:hover {
+  transform: scale(1.1) rotate(5deg) !important;
+}
+.star-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.text-outline-black {
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000;
+}
+
 @keyframes wobble {
   0%, 100% { transform: rotate(-6deg); }
   50% { transform: rotate(6deg); }
