@@ -36,6 +36,7 @@ export function BoardCell({
   return (
     <motion.button
       type="button"
+      data-cell
       disabled={!clickable && !preview}
       onClick={() => clickable && onCellClick?.(x, y)}
       whileHover={clickable ? { scale: 1.05 } : undefined}

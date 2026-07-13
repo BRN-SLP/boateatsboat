@@ -1,8 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef, useState, useEffect } from "react";
 import { BOARD_SIZE } from "@/lib/game-config";
 import { BoardCell, type CellVisual } from "./cell";
+import { ShipOverlay, extractShipRuns, type ShipRun } from "./ship-overlay";
 import { cn } from "@/lib/utils";
 
 export interface BoardState {
@@ -20,85 +21,91 @@ export function Board({
   onCellClick,
   previewCells,
   compact,
+  shipTypes,
 }: {
   state: BoardState;
   theme: "inferno" | "classic";
   label?: string;
   clickable?: boolean;
   onCellClick?: (x: number, y: number) => void;
-  previewCells?: Set<number>; // cell indices hovered during placement
+  previewCells?: Set<number>;
   compact?: boolean;
+  shipTypes?: number[];
 }) {
   const colLetters = "ABCDEFGHIJ";
+  const cellAreaRef = useRef<HTMLDivElement>(null);
+  const [cellSize, setCellSize] = useState(compact ? 24 : 34);
+  const gap = 2;
+
+  useEffect(() => {
+    if (!cellAreaRef.current) return;
+    const measure = () => {
+      const cell = cellAreaRef.current?.querySelector("[data-cell]");
+      if (cell) {
+        const w = cell.getBoundingClientRect().width;
+        if (w > 0) setCellSize(w);
+      }
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const ships: ShipRun[] = shipTypes ? extractShipRuns(shipTypes) : [];
+
   return (
     <div className={cn("flex flex-col gap-1", compact ? "w-full max-w-[260px]" : "w-full max-w-[400px]")}>
       {label && (
         <div className="text-xs font-medium text-slate-500 text-center">{label}</div>
       )}
-      <div className="grid grid-cols-[16px_repeat(10,1fr)] gap-[2px]">
-        {/* top corner + column letters */}
-        <span />
+      {/* Column letters */}
+      <div className="flex gap-[2px] pl-[18px]">
         {Array.from({ length: BOARD_SIZE }, (_, x) => (
-          <span
-            key={x}
-            className="text-center text-[10px] text-slate-400 font-mono"
-          >
+          <span key={x} className="flex-1 text-center text-[10px] text-slate-400 font-mono">
             {colLetters[x]}
           </span>
         ))}
-        {/* rows */}
-        {Array.from({ length: BOARD_SIZE }, (_, y) => (
-          <Row
-            key={y}
-            y={y}
-            state={state}
-            theme={theme}
-            clickable={clickable}
-            onCellClick={onCellClick}
-            previewCells={previewCells}
-          />
-        ))}
+      </div>
+      {/* Body: row labels + cell area */}
+      <div className="flex gap-[2px]">
+        {/* Row labels */}
+        <div className="flex w-[16px] flex-col">
+          {Array.from({ length: BOARD_SIZE }, (_, y) => (
+            <span
+              key={y}
+              className="flex flex-1 items-center justify-end pr-1 text-[10px] text-slate-400 font-mono"
+            >
+              {y + 1}
+            </span>
+          ))}
+        </div>
+        {/* Cell area — relative for ship overlay */}
+        <div ref={cellAreaRef} className="relative flex-1">
+          <div className="grid grid-cols-10 gap-[2px]">
+            {Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, idx) => {
+              const x = idx % BOARD_SIZE;
+              const y = Math.floor(idx / BOARD_SIZE);
+              return (
+                <BoardCell
+                  key={idx}
+                  x={x}
+                  y={y}
+                  visual={state.cells[idx]}
+                  theme={theme}
+                  clickable={clickable}
+                  onCellClick={onCellClick}
+                  preview={previewCells?.has(idx)}
+                />
+              );
+            })}
+          </div>
+          {/* Ship silhouettes overlay */}
+          {ships.length > 0 && (
+            <ShipOverlay ships={ships} cellSize={cellSize} gap={gap} />
+          )}
+        </div>
       </div>
     </div>
-  );
-}
-
-function Row({
-  y,
-  state,
-  theme,
-  clickable,
-  onCellClick,
-  previewCells,
-}: {
-  y: number;
-  state: BoardState;
-  theme: "inferno" | "classic";
-  clickable?: boolean;
-  onCellClick?: (x: number, y: number) => void;
-  previewCells?: Set<number>;
-}) {
-  return (
-    <>
-      <span className="text-right pr-1 text-[10px] text-slate-400 font-mono leading-6">
-        {y + 1}
-      </span>
-      {Array.from({ length: BOARD_SIZE }, (_, x) => {
-        const idx = y * BOARD_SIZE + x;
-        return (
-          <BoardCell
-            key={idx}
-            x={x}
-            y={y}
-            visual={state.cells[idx]}
-            theme={theme}
-            clickable={clickable}
-            onCellClick={onCellClick}
-            preview={previewCells?.has(idx)}
-          />
-        );
-      })}
-    </>
   );
 }
 
