@@ -56,7 +56,7 @@ export default function Home() {
             <div className="relative z-10 pr-4 pt-2">
               <button
                 aria-label="Connect Wallet"
-                className="star-btn group relative flex h-32 w-32 rotate-[15deg] items-center justify-center"
+                className="star-btn group relative flex h-40 w-40 rotate-[15deg] items-center justify-center"
               >
                 {/* Hand-drawn irregular star SVG */}
                 <svg
