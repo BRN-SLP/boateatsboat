@@ -1,85 +1,94 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Flame, Play } from "lucide-react";
-import { FloatingNav } from "@/components/floating-nav";
 
 export default function Home() {
   return (
-    <main className="flex-1 overflow-hidden">
-      {/* Full-screen hero: no scroll, everything fits in viewport */}
-      <section className="relative h-[100svh] w-full overflow-hidden">
-        {/* Artwork: full-bleed background */}
-        <img
-          src="/hero.webp"
-          alt="Bathtub Arena: two toy fleets face off across a bubbly bathtub"
-          className="absolute inset-0 h-full w-full object-cover"
-          fetchPriority="high"
-        />
-
-        {/* Top scrim for floating nav legibility */}
-        <div
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent"
-        />
-        {/* Bottom scrim for CTA legibility */}
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/60 via-black/20 to-transparent"
-        />
-
-        {/* Floating transparent nav — no header bar */}
-        <FloatingNav />
-
-        {/* Centered content — fits in one screen, no scroll */}
-        <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center">
-          {/* Badge */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-black/60 bg-[#F9F7F2]/90 px-4 py-1.5 text-sm font-bold uppercase tracking-wider text-black shadow-sm">
-            <Flame className="h-4 w-4 text-[#DF4949]" />
-            On-chain battleship. Bathtub edition.
-          </div>
-
-          {/* Title: kicker + wordmark */}
-          <h1 className="mb-2 text-xs font-bold uppercase tracking-[0.5em] text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)] sm:text-sm">
-            Bathtub Arena:
-          </h1>
-          <h2 className="mb-8 text-5xl font-black uppercase leading-[0.9] tracking-tight text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.8)] sm:text-7xl lg:text-8xl">
-            BoatEatsBoat
-          </h2>
-
-          {/* Tagline */}
-          <p className="mb-8 max-w-lg text-sm text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] sm:text-base">
-            Plastic ships. Rubber ducks. Real on-chain duels. Commit your fleet
-            with a Merkle root, fire shots, prove every hit.
-          </p>
-
-          {/* CTA: firebrick red pill (per DESIGN.md) */}
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/play">
-              <Button
-                size="lg"
-                className="group gap-2 rounded-full border-2 border-black bg-[#DF4949] px-10 py-6 text-base font-bold uppercase tracking-wide text-white shadow-[0_4px_0_0_#8B0000] transition hover:bg-[#C0392B] active:translate-y-1 active:shadow-[0_1px_0_0_#8B0000]"
-              >
-                <Play className="h-5 w-5 fill-current transition group-hover:scale-110" />
-                Play Now
-              </Button>
-            </Link>
-            <Link href="/leaderboard">
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-full border-2 border-white/50 bg-white/10 px-8 py-6 text-base font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
-              >
-                Leaderboard
-              </Button>
-            </Link>
-          </div>
-
-          {/* Footer text */}
-          <p className="mt-8 text-xs text-white/60 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-            Powered by Celo. Merkle proofs. No cheating.
-          </p>
+    <main className="relative flex min-h-screen overflow-hidden bg-gray-900">
+      {/* 16:9 Game Container */}
+      <div className="relative aspect-video w-full overflow-hidden bg-white shadow-2xl">
+        {/* Background Image */}
+        <div className="absolute inset-0 h-full w-full">
+          <img
+            src="/hero.webp"
+            alt="Bathtub Arena Background"
+            className="h-full w-full object-cover object-center"
+            fetchPriority="high"
+          />
         </div>
-      </section>
+
+        {/* UI Overlay Layer */}
+        <div className="pointer-events-none absolute inset-0 flex h-full w-full flex-col justify-between p-6">
+          {/* Top Section: Navigation, Title, Connect Wallet */}
+          <div className="pointer-events-auto flex items-start justify-between">
+            {/* Left: Navigation Stickers */}
+            <nav
+              aria-label="Main Navigation"
+              className="relative z-10 flex w-32 flex-col gap-2 pl-4 pt-4"
+            >
+              <Link
+                href="/"
+                className="sticker-btn doodle-border doodle-shadow -rotate-6 origin-bottom-right bg-white px-4 py-2 font-marker text-xl uppercase tracking-wider"
+              >
+                Home
+              </Link>
+              <Link
+                href="/play"
+                className="sticker-btn doodle-border doodle-shadow rotate-3 origin-center bg-white px-4 py-2 font-marker text-xl uppercase tracking-wider"
+              >
+                Arena
+              </Link>
+              <Link
+                href="/about"
+                className="sticker-btn doodle-border doodle-shadow -rotate-2 origin-top-left bg-white px-4 py-2 font-marker text-xl uppercase tracking-wider"
+              >
+                About
+              </Link>
+            </nav>
+
+            {/* Center: Header Title */}
+            <header className="relative z-0 flex flex-1 flex-col items-center justify-start pt-2">
+              <h1 className="text-center font-creepster text-5xl leading-tight tracking-widest text-white text-outline-black drop-shadow-md md:text-6xl lg:text-7xl">
+                <span className="block">BATHTUB ARENA:</span>
+                <span className="mt-1 block">BOATEATSBOAT</span>
+              </h1>
+            </header>
+
+            {/* Right: Connect Wallet Star */}
+            <div className="relative z-10 pr-4 pt-2">
+              <button
+                aria-label="Connect Wallet"
+                className="star-btn group relative flex h-32 w-32 rotate-[15deg] items-center justify-center"
+              >
+                {/* Hand-drawn irregular star SVG */}
+                <svg
+                  className="absolute inset-0 h-full w-full fill-yellow-400 stroke-[#1a1a1a] stroke-[3px] drop-shadow-[4px_4px_0_rgba(26,26,26,1)]"
+                  viewBox="0 0 100 100"
+                >
+                  <path
+                    d="M50 5 L62 38 L95 40 L70 62 L78 95 L50 78 L22 95 L30 62 L5 40 L38 38 Z"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span className="relative z-10 block w-20 -rotate-[15deg] text-center font-marker text-sm font-bold uppercase leading-tight text-black">
+                  Connect
+                  <br />
+                  Wallet
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Section: Play Button */}
+          <div className="pointer-events-auto flex w-full justify-center pb-8">
+            <Link href="/play">
+              <button className="play-btn doodle-shadow-large group relative overflow-hidden rounded-[2rem] border-4 border-[#1a1a1a] bg-[#d33a30] px-12 py-4 font-marker text-4xl uppercase tracking-wider text-white md:text-5xl">
+                {/* Subtle highlight overlay for 3D effect */}
+                <div className="absolute left-0 top-0 h-1/3 w-full rounded-t-[1.5rem] bg-white opacity-20"></div>
+                <span className="relative z-10 tracking-wider">PLAY NOW</span>
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

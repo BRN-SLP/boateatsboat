@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Permanent_Marker, Creepster } from 'next/font/google';
 import './globals.css';
 
 import { ConditionalNavbar } from '@/components/conditional-navbar';
 import { WalletProvider } from "@/components/wallet-provider"
 
 const inter = Inter({ subsets: ['latin'] });
+const permanentMarker = Permanent_Marker({ weight: '400', subsets: ['latin'], variable: '--font-marker' });
+const creepster = Creepster({ weight: '400', subsets: ['latin'], variable: '--font-creepster' });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://boateatsboat.vercel.app'),
@@ -30,7 +32,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} ${permanentMarker.variable} ${creepster.variable}`}>
         {/* Navbar is included on all pages */}
         <div className="relative flex min-h-screen flex-col">
           <WalletProvider>
