@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="relative flex min-h-screen overflow-hidden bg-gray-900">
+    <main className="relative flex h-screen w-screen overflow-hidden bg-gray-900">
       {/* 16:9 Game Container */}
       <div className="relative aspect-video w-full overflow-hidden bg-white shadow-2xl">
         {/* Background Image */}
