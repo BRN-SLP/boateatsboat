@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Flame, Play } from "lucide-react";
+import { FloatingNav } from "@/components/floating-nav";
 
 export default function Home() {
   return (
@@ -15,7 +16,7 @@ export default function Home() {
           fetchPriority="high"
         />
 
-        {/* Top scrim for navbar legibility */}
+        {/* Top scrim for floating nav legibility */}
         <div
           aria-hidden
           className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent"
@@ -25,6 +26,9 @@ export default function Home() {
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/60 via-black/20 to-transparent"
         />
+
+        {/* Floating transparent nav — no header bar */}
+        <FloatingNav />
 
         {/* Centered content — fits in one screen, no scroll */}
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center">
