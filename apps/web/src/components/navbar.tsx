@@ -16,7 +16,7 @@ import { ConnectButton } from "@/components/connect-button"
 const navLinks = [
   { name: "Home", href: "/" },
   { name: "Arena", href: "/play" },
-  { name: "About", href: "/#how" },
+  { name: "About", href: "/about" },
 ]
 
 export function Navbar() {
