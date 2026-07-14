@@ -1,33 +1,17 @@
 "use client";
 
 import { BOARD_SIZE } from "@/lib/game-config";
-import { ShipSprite, SHIP_COLORS } from "./ship-sprites";
+import { ShipSprite, type FleetColor, type ShipType } from "./ship-sprites";
+
+export type { FleetColor };
 
 // Ship type encoding matches placement.types[]: 0=water, 1-4 = ships.
-const TYPE_LABELS = {
+const TYPE_LABELS: Record<number, ShipType> = {
   1: "carrier",
   2: "battleship",
   3: "cruiser",
   4: "submarine",
-} as const;
-
-// Two fleet color schemes — blue family for player, green family for enemy.
-const FLEET_PALETTES = {
-  blue: {
-    1: SHIP_COLORS.blue,       // Carrier — bright blue
-    2: SHIP_COLORS.navy,       // Battleship — dark navy
-    3: SHIP_COLORS.teal,       // Cruiser — teal
-    4: "#5B9BD5",              // Submarine — lighter blue
-  },
-  green: {
-    1: SHIP_COLORS.green,      // Carrier — army green
-    2: "#3E5B23",              // Battleship — dark olive
-    3: SHIP_COLORS.yellowGreen,// Cruiser — yellow-green
-    4: "#6B8E4E",              // Submarine — sage
-  },
-} as const;
-
-export type FleetColor = keyof typeof FLEET_PALETTES;
+};
 
 export interface ShipRun {
   type: number; // 1-4
@@ -52,12 +36,10 @@ export function extractShipRuns(types: number[]): ShipRun[] {
     const x = i % BOARD_SIZE;
     const y = Math.floor(i / BOARD_SIZE);
 
-    // Check which direction the ship extends.
     const right = x < BOARD_SIZE - 1 ? types[i + 1] : 0;
     const down = y < BOARD_SIZE - 1 ? types[i + BOARD_SIZE] : 0;
 
     if (right === type) {
-      // Horizontal run.
       let cx = x;
       while (cx < BOARD_SIZE && types[y * BOARD_SIZE + cx] === type) {
         visited.add(y * BOARD_SIZE + cx);
@@ -65,7 +47,6 @@ export function extractShipRuns(types: number[]): ShipRun[] {
       }
       runs.push({ type, cells: cx - x, startX: x, startY: y, vertical: false });
     } else if (down === type) {
-      // Vertical run.
       let cy = y;
       while (cy < BOARD_SIZE && types[cy * BOARD_SIZE + x] === type) {
         visited.add(cy * BOARD_SIZE + x);
@@ -73,7 +54,6 @@ export function extractShipRuns(types: number[]): ShipRun[] {
       }
       runs.push({ type, cells: cy - y, startX: x, startY: y, vertical: true });
     } else {
-      // Single-cell (shouldn't happen, but handle gracefully).
       visited.add(i);
       runs.push({ type, cells: 1, startX: x, startY: y, vertical: false });
     }
@@ -84,7 +64,6 @@ export function extractShipRuns(types: number[]): ShipRun[] {
 
 /**
  * Renders ship silhouettes as an absolutely-positioned overlay on the board grid.
- * Must be placed inside a `relative` container that exactly wraps the 10×10 cell grid.
  */
 export function ShipOverlay({
   ships,
@@ -98,22 +77,16 @@ export function ShipOverlay({
   fleet?: FleetColor;
 }) {
   const step = cellSize + gap;
-  const palette = FLEET_PALETTES[fleet];
 
   return (
     <div className="pointer-events-none absolute inset-0">
       {ships.map((ship, i) => {
         const left = ship.startX * step;
         const top = ship.startY * step;
-        const label = TYPE_LABELS[ship.type as keyof typeof TYPE_LABELS] ?? "carrier";
-        const color = palette[ship.type as 1 | 2 | 3 | 4] ?? SHIP_COLORS.blue;
+        const label = TYPE_LABELS[ship.type] ?? "carrier";
 
         return (
-          <div
-            key={i}
-            className="absolute"
-            style={{ left, top }}
-          >
+          <div key={i} className="absolute" style={{ left, top }}>
             {ship.vertical ? (
               <div
                 style={{
@@ -122,18 +95,18 @@ export function ShipOverlay({
                 }}
               >
                 <ShipSprite
-                  cells={ship.cells}
                   type={label}
-                  color={color}
+                  fleet={fleet}
                   cellSize={cellSize}
+                  cells={ship.cells}
                 />
               </div>
             ) : (
               <ShipSprite
-                cells={ship.cells}
                 type={label}
-                color={color}
+                fleet={fleet}
                 cellSize={cellSize}
+                cells={ship.cells}
               />
             )}
           </div>
