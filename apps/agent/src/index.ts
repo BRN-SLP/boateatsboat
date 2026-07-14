@@ -19,8 +19,6 @@ interface AgentGame {
 const activeGames: Map<bigint, AgentGame> = new Map();
 
 const POLL_INTERVAL_MS = 12_000; // poll every 12s
-const GAME_CREATED_TOPIC =
-  "0xe8d65b57a2d0d651c6c8e0c34035b3ba7fc157602b9b0c34035b3ba7fc157602" as const;
 
 console.log(`[BoatEatsBoat agent] address=${AGENT_ADDRESS} chain=${CHAIN.name}`);
 console.log(`[BoatEatsBoat agent] game=${gameAddress}`);
@@ -207,6 +205,10 @@ async function playActiveTurn(gameId: bigint, game: any, myIdx: 0 | 1) {
 
   // If it is our turn and no pending shot, fire using the AI.
   if (Number(game.turn) === myIdx && !pending.active) {
+    // First, check if we have previous shots that were resolved while we were away.
+    // Read recent ShotResolved events for this game where we were the shooter.
+    await syncResolvedShots(gameId, ag, myIdx);
+
     const target = ag.ai.nextShot();
     if (target === null) return;
     const x = target % BOARD_SIZE;
@@ -220,47 +222,62 @@ async function playActiveTurn(gameId: bigint, game: any, myIdx: 0 | 1) {
         account: walletClient.account,
         chain: CHAIN,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      // Parse ShotResolved from logs to feed the AI.
-      const outcome = parseShotResolved(receipt.logs, x, y);
-      if (outcome) {
-        ag.ai.recordOutcome(target, { x, y, ...outcome });
-        console.log(
-          `[agent] fired at (${x},${y}) in game ${gameId} -> ${
-            outcome.hit ? "HIT" : "miss"
-          }`
-        );
-      }
+      await publicClient.waitForTransactionReceipt({ hash });
+      // Result comes when defender responds — synced on next tick via syncResolvedShots.
+      console.log(`[agent] fired at (${x},${y}) in game ${gameId}, awaiting response`);
     } catch (e) {
       console.error(`[agent] fire ${gameId} failed:`, (e as Error).message);
     }
   }
 }
 
-// ShotResolved topic = keccak256("ShotResolved(uint256,uint8,uint8,uint8,uint8,bool,bool,bool,bool)")
-const SHOT_RESOLVED_TOPIC =
-  "0x" +
-  // Pre-computed topic; falls back to scanning if signature differs.
-  "0".repeat(64);
-
-function parseShotResolved(logs: any[], x: number, y: number): { hit: boolean; cellType: number } | null {
-  // Best-effort log scan. The contract emits ShotResolved after respondShot.
-  // We accept any log in the receipt whose data decodes to (cellType, hit, ...).
-  for (const log of logs) {
-    if (!log.data || log.data.length < 130) continue;
-    // Non-indexed fields are packed in data: cellType(uint8), hit(bool), armored(bool), stealth(bool), sunk(bool).
-    // viem decodes logs as raw hex; we read byte offsets.
-    try {
-      const data: string = log.data;
-      // Each non-indexed arg occupies 32 bytes in ABI encoding.
-      const cellType = parseInt(data.slice(2 + 0, 2 + 64), 16);
-      const hit = parseInt(data.slice(2 + 64, 2 + 128), 16) === 1;
-      return { hit, cellType };
-    } catch {
-      continue;
+/**
+ * Scan ShotResolved events to update the AI with outcomes it hasn't seen yet.
+ * This handles the async nature: fire() and respondShot() are separate txs.
+ */
+async function syncResolvedShots(gameId: bigint, ag: AgentGame, myIdx: 0 | 1) {
+  try {
+    const currentBlock = await publicClient.getBlockNumber();
+    const fromBlock = currentBlock > 1000n ? currentBlock - 1000n : 0n;
+    const logs = await publicClient.getLogs({
+      address: gameAddress,
+      event: {
+        type: "event",
+        name: "ShotResolved",
+        inputs: [
+          { name: "gameId", type: "uint256", indexed: true },
+          { name: "defenderIdx", type: "uint8", indexed: true },
+          { name: "x", type: "uint8", indexed: false },
+          { name: "y", type: "uint8", indexed: false },
+          { name: "cellType", type: "uint8", indexed: false },
+          { name: "hit", type: "bool", indexed: false },
+          { name: "armored", type: "bool", indexed: false },
+          { name: "stealth", type: "bool", indexed: false },
+          { name: "sunk", type: "bool", indexed: false },
+        ],
+      },
+      args: { gameId },
+      fromBlock,
+      toBlock: currentBlock,
+    });
+    // We are the shooter when defenderIdx != myIdx.
+    for (const log of logs) {
+      const args = log.args as any;
+      if (Number(args.defenderIdx) === myIdx) continue; // we were defender, not shooter
+      const x = Number(args.x);
+      const y = Number(args.y);
+      const cellIndex = y * BOARD_SIZE + x;
+      const outcome = {
+        x,
+        y,
+        hit: Boolean(args.hit),
+        cellType: Number(args.cellType),
+      };
+      ag.ai.recordOutcome(cellIndex, outcome);
     }
+  } catch {
+    // non-critical: AI just won't have perfect info for this tick
   }
-  return null;
 }
 
 main().catch((e) => {
