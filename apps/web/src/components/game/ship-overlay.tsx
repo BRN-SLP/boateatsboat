@@ -5,13 +5,25 @@ import { ShipSprite, type FleetColor, type ShipType } from "./ship-sprites";
 
 export type { FleetColor };
 
-// Ship type encoding matches placement.types[]: 0=water, 1-4 = ships.
-const TYPE_LABELS: Record<number, ShipType> = {
-  1: "carrier",
-  2: "battleship",
-  3: "cruiser",
-  4: "submarine",
-};
+// Ship type encoding mirrors BattleshipGame.sol:
+//   0  = water
+//   1  = TYPE_SHIP_HP1 (Carrier 5, Cruiser 3)
+//   21 = TYPE_SHIP_HP2 (Battleship 4)
+//   41 = TYPE_SUB_STEALTH (Submarine 3)
+// Since Carrier and Cruiser share type 1, we distinguish by run length.
+
+const TYPE_CLASSES = {
+  1: "hp1",    // HP1 ships: carrier (5) or cruiser (3)
+  21: "hp2",   // HP2 ship: battleship (4)
+  41: "sub",   // Stealth sub: submarine (3)
+} as const;
+
+function classifyShip(type: number, cells: number): ShipType {
+  if (type === 41) return "submarine";
+  if (type === 21) return "battleship";
+  // HP1: 5 cells = carrier, 3 cells = cruiser
+  return cells >= 5 ? "carrier" : "cruiser";
+}
 
 export interface ShipRun {
   type: number; // 1-4
@@ -83,7 +95,7 @@ export function ShipOverlay({
       {ships.map((ship, i) => {
         const left = ship.startX * step;
         const top = ship.startY * step;
-        const label = TYPE_LABELS[ship.type] ?? "carrier";
+        const label = classifyShip(ship.type, ship.cells);
 
         return (
           <div key={i} className="absolute" style={{ left, top }}>
