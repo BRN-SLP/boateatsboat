@@ -130,6 +130,8 @@ export function FleetPlacer({
           clickable={!!currentSpec}
           onCellClick={(x, y) => place(x, y)}
           previewCells={canPlace ? hoverCells : undefined}
+          shipTypes={types}
+          fleet="blue"
         />
         <div
           className="grid grid-cols-[16px_repeat(10,1fr)] gap-[2px] opacity-0 pointer-events-none h-0"
