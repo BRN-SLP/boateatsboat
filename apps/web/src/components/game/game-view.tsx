@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAccount, useWriteContract, usePublicClient } from "wagmi";
 import { useGame } from "@/hooks/use-game";
@@ -237,6 +237,55 @@ function ActiveBattle({
   const myTurn = turn === meIdx && !pending?.active;
   const mustRespond = Boolean(pending?.active && pending.shooterIdx !== meIdx);
 
+  // Subscribe to ShotResolved events to update boards with real outcomes.
+  useEffect(() => {
+    if (!publicClient || !chain) return;
+    const proxy = gameProxyFor(chain.id);
+    const unwatch = publicClient.watchEvent({
+      address: proxy,
+      event: {
+        type: "event",
+        name: "ShotResolved",
+        inputs: [
+          { name: "gameId", type: "uint256", indexed: true },
+          { name: "defenderIdx", type: "uint8", indexed: true },
+          { name: "x", type: "uint8", indexed: false },
+          { name: "y", type: "uint8", indexed: false },
+          { name: "cellType", type: "uint8", indexed: false },
+          { name: "hit", type: "bool", indexed: false },
+          { name: "armored", type: "bool", indexed: false },
+          { name: "stealth", type: "bool", indexed: false },
+          { name: "sunk", type: "bool", indexed: false },
+        ],
+      },
+      args: { gameId },
+      onLogs: (logs) => {
+        for (const log of logs) {
+          const { defenderIdx, x, y, cellType, hit } = log.args as any;
+          const idx = Number(y) * BOARD_SIZE + Number(x);
+          const isHit = Boolean(hit);
+          if (Number(defenderIdx) === meIdx) {
+            // Shot at MY board — update myShots
+            setMyShots((prev) => {
+              const next = new Map(prev);
+              next.set(idx, isHit ? "hit" : "miss");
+              return next;
+            });
+          } else {
+            // Shot at ENEMY board — update enemyShots
+            setEnemyShots((prev) => {
+              const next = new Map(prev);
+              next.set(idx, isHit ? "hit" : "miss");
+              return next;
+            });
+          }
+        }
+      },
+      pollingInterval: 4000,
+    });
+    return () => { unwatch(); };
+  }, [publicClient, chain, gameId, meIdx, setEnemyShots, setMyShots]);
+
   // Build enemy board visual: fog for un-fired cells, hit/miss for fired.
   const enemyBoard = useMemo<BoardState>(() => {
     const cells: CellVisual[] = [];
@@ -273,25 +322,14 @@ function ActiveBattle({
           args: [gameId, x, y],
         },
         {
-          onSuccess: async (hash) => {
-            // Wait for receipt, parse ShotResolved to mark enemy board.
-            if (!publicClient) return;
-            const receipt = await publicClient.waitForTransactionReceipt({ hash });
-            const idx = y * BOARD_SIZE + x;
-            // Decode ShotResolved(logs): non-indexed = (cellType uint8, hit bool, ...).
-            // The last log on the game contract after respondShot is ShotResolved.
-            // Note: respondShot happens in a SEPARATE tx from the opponent. We optimistically
-            // mark "pending" here; the real outcome arrives when the defender answers.
-            setEnemyShots((prev) => {
-              const next = new Map(prev);
-              if (!next.has(idx)) next.set(idx, "miss"); // optimistic; updated on respond
-              return next;
-            });
+          onSuccess: () => {
+            // Real outcome arrives via ShotResolved event listener above.
+            // useGame polling will refresh pending shot + turn state.
           },
         }
       );
     },
-    [chain, myTurn, gameId, publicClient, setEnemyShots]
+    [chain, myTurn, gameId]
   );
 
   const onRespond = useCallback(() => {
