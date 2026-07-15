@@ -171,23 +171,27 @@ export function FleetPlacer({
           })}
         </ul>
 
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost" onClick={reset}>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={doRandomize}
+            disabled={!randomize}
+            className="doodle-border doodle-shadow rounded-xl bg-[#257ABB] px-4 py-2 font-marker text-sm uppercase tracking-wide text-white hover:scale-105 transition-transform disabled:opacity-30"
+          >
+            ⚂ Random
+          </button>
+          <button
+            onClick={reset}
+            className="doodle-border rounded-xl bg-white px-4 py-2 font-marker text-sm uppercase tracking-wide text-[#1a1a1a] hover:scale-105 transition-transform"
+          >
             Reset
-          </Button>
-          {randomize && (
-            <Button size="sm" variant="ghost" onClick={doRandomize}>
-              Random
-            </Button>
-          )}
-          <Button
-            size="sm"
+          </button>
+          <button
             disabled={!allPlaced}
             onClick={ready}
-            className="ml-auto"
+            className="doodle-border doodle-shadow ml-auto rounded-xl bg-[#d33a30] px-4 py-2 font-marker text-sm uppercase tracking-wide text-white hover:scale-105 transition-transform disabled:opacity-30"
           >
-            Ready
-          </Button>
+            Ready ✓
+          </button>
         </div>
 
         <AnimatePresence>

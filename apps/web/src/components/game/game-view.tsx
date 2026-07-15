@@ -7,6 +7,7 @@ import { useGame } from "@/hooks/use-game";
 import { gameAbi } from "@/lib/game-abi";
 import { gameProxyFor, BOARD_SIZE } from "@/lib/game-config";
 import { getProof } from "@/lib/merkle";
+import { randomBoard } from "@/lib/random-board";
 import { Board, emptyBoard, type BoardState, type CellVisual } from "./board";
 import { FleetPlacer, type PlacementResult } from "./fleet-placer";
 import { Button } from "@/components/ui/button";
@@ -69,8 +70,8 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
         <FleetPlacer
           onReady={(res) => {
             setPlacement(res);
-            // Actually commit on-chain happens in the PlacingPhase below.
           }}
+          randomize={randomBoard}
         />
         <PlacingCommit
           gameId={gameId}
