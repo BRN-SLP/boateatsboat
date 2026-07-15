@@ -359,40 +359,45 @@ function ActiveBattle({
   }, [chain, mustRespond, placement, pending, gameId, setMyShots]);
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:gap-10 items-start">
-      <BoardColumn
-        title="Their fleet"
-        subtitle={`${enemyCellsRemaining} cells afloat`}
-        board={enemyBoard}
-        theme={theme}
-        clickable={myTurn}
-        onCellClick={onFire}
-      />
-
-      <div className="flex flex-col gap-3 max-w-xs">
+    <div className="flex flex-col gap-4">
+      {/* Status bar */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <StatusLine
           myTurn={myTurn}
           mustRespond={mustRespond}
           cellsRemaining={cellsRemaining}
         />
         {mustRespond && (
-          <Button disabled={isPending} onClick={onRespond}>
+          <button
+            disabled={isPending}
+            onClick={onRespond}
+            className="doodle-border doodle-shadow rounded-xl bg-[#d33a30] px-4 py-2 font-marker text-sm uppercase text-white disabled:opacity-40"
+          >
             {isPending ? "Answering..." : "Answer shot (proof)"}
-          </Button>
+          </button>
         )}
-        <p className="text-xs text-slate-500">
-          Each shot is on-chain. Prove hit/miss with a Merkle proof -- no peeking possible.
-        </p>
       </div>
 
-      <BoardColumn
-        title="Your fleet"
-        subtitle={`${cellsRemaining} cells afloat`}
-        board={ownBoard}
-        theme={theme}
-        shipTypes={placement?.types}
-        fleet="blue"
-      />
+      {/* Two boards side by side */}
+      <div className="flex flex-wrap justify-center gap-6">
+        <BoardColumn
+          title="Their fleet"
+          subtitle={`${enemyCellsRemaining} cells afloat`}
+          board={enemyBoard}
+          theme={theme}
+          clickable={myTurn}
+          onCellClick={onFire}
+          fleet="green"
+        />
+        <BoardColumn
+          title="Your fleet"
+          subtitle={`${cellsRemaining} cells afloat`}
+          board={ownBoard}
+          theme={theme}
+          shipTypes={placement?.types}
+          fleet="blue"
+        />
+      </div>
     </div>
   );
 }
