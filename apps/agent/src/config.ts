@@ -1,4 +1,5 @@
 import { createWalletClient, createPublicClient, http, type Hex, type Address } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { celoSepolia, celo } from "viem/chains";
 
 /**
@@ -26,8 +27,9 @@ if (!process.env.GAME_CONTRACT) {
   process.exit(1);
 }
 
-export const agentAccount = process.env.AGENT_PRIVATE_KEY as Hex;
 export const gameAddress = process.env.GAME_CONTRACT as Address;
+
+const agentAccount = privateKeyToAccount(process.env.AGENT_PRIVATE_KEY as Hex);
 
 export const publicClient = createPublicClient({
   chain: CHAIN,
@@ -40,4 +42,4 @@ export const walletClient = createWalletClient({
   account: agentAccount,
 });
 
-export const AGENT_ADDRESS = walletClient.account.address;
+export const AGENT_ADDRESS = agentAccount.address;

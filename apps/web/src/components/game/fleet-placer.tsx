@@ -121,8 +121,8 @@ export function FleetPlacer({
   const visualCells = types.map((t) => (t === TYPE_WATER ? "water" : "ship")) as any;
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
-      <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+      <div className="flex flex-1 justify-center gap-3">
         <Board
           state={{ cells: visualCells }}
           theme="inferno"
@@ -133,13 +133,9 @@ export function FleetPlacer({
           shipTypes={types}
           fleet="blue"
         />
-        <div
-          className="grid grid-cols-[16px_repeat(10,1fr)] gap-[2px] opacity-0 pointer-events-none h-0"
-          aria-hidden
-        />
       </div>
 
-      <div className="flex flex-col gap-3 max-w-xs">
+      <div className="flex flex-col gap-3 md:w-56">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-slate-700">Place your fleet</h3>
           <div className="flex gap-1">
