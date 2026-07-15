@@ -67,8 +67,17 @@ export function FleetPlacer({
 
   const place = useCallback(
     (x: number, y: number) => {
-      if (!currentSpec || !canPlace) return;
-      const cells = Array.from(hoverCells);
+      if (!currentSpec) return;
+      // Compute cells directly from click coords + orientation.
+      const cells: number[] = [];
+      for (let i = 0; i < currentSpec.size; i++) {
+        const cx = orientation === "h" ? x + i : x;
+        const cy = orientation === "h" ? y : y + i;
+        if (cx >= BOARD_SIZE || cy >= BOARD_SIZE) return; // out of bounds
+        const idx = cy * BOARD_SIZE + cx;
+        if (types[idx] !== TYPE_WATER) return; // occupied
+        cells.push(idx);
+      }
       const newTypes = [...types];
       for (const idx of cells) newTypes[idx] = currentSpec.type;
       const newShip: ShipState = {
@@ -77,13 +86,12 @@ export function FleetPlacer({
         type: currentSpec.type,
         cells,
       };
-      const newShips = [...ships, newShip];
       setTypes(newTypes);
-      setShips(newShips);
+      setShips([...ships, newShip]);
       setSelectedShipIdx(0);
       setHoverCell(null);
     },
-    [currentSpec, canPlace, hoverCells, types, ships]
+    [currentSpec, orientation, types, ships]
   );
 
   const reset = useCallback(() => {
