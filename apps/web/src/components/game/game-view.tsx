@@ -242,46 +242,60 @@ function ActiveBattle({
   useEffect(() => {
     if (!publicClient || !chain) return;
     const proxy = gameProxyFor(chain.id);
+
+    const shotEvent = {
+      type: "event",
+      name: "ShotResolved",
+      inputs: [
+        { name: "gameId", type: "uint256", indexed: true },
+        { name: "defenderIdx", type: "uint8", indexed: true },
+        { name: "x", type: "uint8", indexed: false },
+        { name: "y", type: "uint8", indexed: false },
+        { name: "cellType", type: "uint8", indexed: false },
+        { name: "hit", type: "bool", indexed: false },
+        { name: "armored", type: "bool", indexed: false },
+        { name: "stealth", type: "bool", indexed: false },
+        { name: "sunk", type: "bool", indexed: false },
+      ],
+    } as const;
+
+    const applyLogs = (logs: any[]) => {
+      for (const log of logs) {
+        const { defenderIdx, x, y, hit } = log.args ?? {};
+        if (x == null || y == null) continue;
+        const idx = Number(y) * BOARD_SIZE + Number(x);
+        const isHit = Boolean(hit);
+        if (Number(defenderIdx) === meIdx) {
+          setMyShots((prev) => {
+            const next = new Map(prev);
+            next.set(idx, isHit ? "hit" : "miss");
+            return next;
+          });
+        } else {
+          setEnemyShots((prev) => {
+            const next = new Map(prev);
+            next.set(idx, isHit ? "hit" : "miss");
+            return next;
+          });
+        }
+      }
+    };
+
+    // 1. Load historical ShotResolved events for this game.
+    publicClient.getLogs({
+      address: proxy,
+      event: shotEvent,
+      args: { gameId },
+      fromBlock: 0n,
+      toBlock: "latest",
+    }).then(applyLogs).catch(() => {});
+
+    // 2. Watch for new events.
     const unwatch = publicClient.watchEvent({
       address: proxy,
-      event: {
-        type: "event",
-        name: "ShotResolved",
-        inputs: [
-          { name: "gameId", type: "uint256", indexed: true },
-          { name: "defenderIdx", type: "uint8", indexed: true },
-          { name: "x", type: "uint8", indexed: false },
-          { name: "y", type: "uint8", indexed: false },
-          { name: "cellType", type: "uint8", indexed: false },
-          { name: "hit", type: "bool", indexed: false },
-          { name: "armored", type: "bool", indexed: false },
-          { name: "stealth", type: "bool", indexed: false },
-          { name: "sunk", type: "bool", indexed: false },
-        ],
-      },
+      event: shotEvent,
       args: { gameId },
-      onLogs: (logs) => {
-        for (const log of logs) {
-          const { defenderIdx, x, y, cellType, hit } = log.args as any;
-          const idx = Number(y) * BOARD_SIZE + Number(x);
-          const isHit = Boolean(hit);
-          if (Number(defenderIdx) === meIdx) {
-            // Shot at MY board — update myShots
-            setMyShots((prev) => {
-              const next = new Map(prev);
-              next.set(idx, isHit ? "hit" : "miss");
-              return next;
-            });
-          } else {
-            // Shot at ENEMY board — update enemyShots
-            setEnemyShots((prev) => {
-              const next = new Map(prev);
-              next.set(idx, isHit ? "hit" : "miss");
-              return next;
-            });
-          }
-        }
-      },
+      onLogs: applyLogs,
       pollingInterval: 4000,
     });
     return () => { unwatch(); };
