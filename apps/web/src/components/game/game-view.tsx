@@ -18,7 +18,31 @@ type Theme = "inferno" | "classic";
 export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
   const { game, pending, loading, error, myAddress } = useGame(gameId);
 
-  const [placement, setPlacement] = useState<PlacementResult | null>(null);
+  // Persist placement in localStorage so it survives page refresh.
+  const storageKey = `beb-placement-${gameId}`;
+  const [placement, setPlacement] = useState<PlacementResult | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed as PlacementResult;
+    } catch {
+      return null;
+    }
+  });
+
+  const savePlacement = useCallback((res: PlacementResult | null) => {
+    setPlacement(res);
+    if (typeof window !== "undefined") {
+      if (res) {
+        localStorage.setItem(storageKey, JSON.stringify(res));
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    }
+  }, [storageKey]);
+
   // Enemy board: shots I have fired (hit/miss markers).
   const [enemyShots, setEnemyShots] = useState<Map<number, "hit" | "miss">>(new Map());
   // My board: shots opponent has fired at me.
@@ -69,7 +93,7 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
       <div className="p-4">
         <FleetPlacer
           onReady={(res) => {
-            setPlacement(res);
+            savePlacement(res);
           }}
           randomize={randomBoard}
         />

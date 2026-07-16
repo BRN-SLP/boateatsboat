@@ -15,7 +15,7 @@ export default function GamePage() {
       <div className="relative aspect-video h-full max-h-screen w-full overflow-hidden bg-[#A8D8EA]">
         <div className="absolute inset-0 flex h-full w-full flex-col p-4">
           {/* Top bar: compact nav + title */}
-          <div className="flex shrink-0 items-center justify-between">
+          <div className="relative flex shrink-0 items-center justify-between">
             <nav className="flex gap-1.5">
               <Link href="/" className="sticker-btn doodle-border doodle-shadow -rotate-3 bg-white px-2.5 py-1 text-center font-marker text-sm uppercase tracking-wider">
                 Home
@@ -28,7 +28,7 @@ export default function GamePage() {
               </Link>
             </nav>
 
-            <h1 className="font-creepster text-2xl tracking-widest text-[#1a1a1a] md:text-3xl">
+            <h1 className="absolute left-1/2 -translate-x-1/2 font-creepster text-2xl tracking-widest text-[#1a1a1a] md:text-3xl">
               DUEL <span className="font-mono">#{params.id}</span>
             </h1>
 
