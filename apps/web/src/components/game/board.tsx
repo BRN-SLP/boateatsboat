@@ -56,7 +56,7 @@ export function Board({
   const ships: ShipRun[] = shipTypes ? extractShipRuns(shipTypes) : [];
 
   return (
-    <div className={cn("flex flex-col gap-1", compact ? "w-full max-w-[260px]" : "w-full max-w-[520px]")}>
+    <div className={cn("flex flex-col gap-1", compact ? "w-full max-w-[260px]" : "w-full")}>
       {label && (
         <div className="text-xs font-medium text-slate-500 text-center">{label}</div>
       )}

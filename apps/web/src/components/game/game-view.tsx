@@ -393,24 +393,28 @@ function ActiveBattle({
       </div>
 
       {/* Two boards side by side */}
-      <div className="flex flex-wrap justify-center gap-6">
-        <BoardColumn
-          title="Their fleet"
-          subtitle={`${enemyCellsRemaining} cells afloat`}
-          board={enemyBoard}
-          theme={theme}
-          clickable={myTurn}
-          onCellClick={onFire}
-          fleet="green"
-        />
-        <BoardColumn
-          title="Your fleet"
-          subtitle={`${cellsRemaining} cells afloat`}
-          board={ownBoard}
-          theme={theme}
-          shipTypes={placement?.types}
-          fleet="blue"
-        />
+      <div className="flex flex-wrap items-start justify-center gap-4">
+        <div className="min-w-0 flex-1" style={{ maxWidth: "50%" }}>
+          <BoardColumn
+            title="Their fleet"
+            subtitle={`${enemyCellsRemaining} cells afloat`}
+            board={enemyBoard}
+            theme={theme}
+            clickable={myTurn}
+            onCellClick={onFire}
+            fleet="green"
+          />
+        </div>
+        <div className="min-w-0 flex-1" style={{ maxWidth: "50%" }}>
+          <BoardColumn
+            title="Your fleet"
+            subtitle={`${cellsRemaining} cells afloat`}
+            board={ownBoard}
+            theme={theme}
+            shipTypes={placement?.types}
+            fleet="blue"
+          />
+        </div>
       </div>
     </div>
   );
