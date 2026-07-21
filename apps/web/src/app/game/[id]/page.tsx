@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { GameView } from "@/components/game/game-view";
+import { StarConnect } from "@/components/star-connect";
 
 export default function GamePage() {
   const params = useParams<{ id: string }>();
@@ -32,7 +33,8 @@ export default function GamePage() {
               DUEL <span className="font-mono">#{params.id}</span>
             </h1>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
+              <StarConnect size="sm" />
               <ThemeToggle label="🔥" active={theme === "inferno"} onClick={() => setTheme("inferno")} />
               <ThemeToggle label="⚓" active={theme === "classic"} onClick={() => setTheme("classic")} />
             </div>

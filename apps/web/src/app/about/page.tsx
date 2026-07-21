@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Anchor, Flame, Shield } from "lucide-react";
+import { StarConnect } from "@/components/star-connect";
 
 export default function AboutPage() {
   return (
@@ -30,7 +31,9 @@ export default function AboutPage() {
               </p>
             </header>
 
-            <div className="w-28" />
+            <div className="flex w-28 justify-end pt-2">
+              <StarConnect size="sm" />
+            </div>
           </div>
 
           {/* Scrollable content area */}

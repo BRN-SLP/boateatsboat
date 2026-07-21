@@ -198,7 +198,7 @@ export function FleetPlacer({
             onClick={ready}
             className="doodle-border doodle-shadow ml-auto rounded-xl bg-[#d33a30] px-4 py-2 font-marker text-sm uppercase tracking-wide text-white hover:scale-105 transition-transform disabled:opacity-30"
           >
-            Ready ✓
+            Deploy Fleet ⚓
           </button>
         </div>
 

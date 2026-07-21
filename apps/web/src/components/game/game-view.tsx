@@ -10,13 +10,14 @@ import { getProof } from "@/lib/merkle";
 import { randomBoard } from "@/lib/random-board";
 import { Board, emptyBoard, type BoardState, type CellVisual } from "./board";
 import { FleetPlacer, type PlacementResult } from "./fleet-placer";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Theme = "inferno" | "classic";
 
 export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
   const { game, pending, loading, error, myAddress } = useGame(gameId);
+  const { chain } = useAccount();
+  const { writeContract } = useWriteContract();
 
   // Persist placement in localStorage so it survives page refresh.
   const storageKey = `beb-placement-${gameId}`;
@@ -94,15 +95,18 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
         <FleetPlacer
           onReady={(res) => {
             savePlacement(res);
+            // Commit immediately on-chain.
+            if (chain) {
+              const proxy = gameProxyFor(chain.id);
+              writeContract({
+                address: proxy,
+                abi: gameAbi,
+                functionName: "commitBoard",
+                args: [gameId, res.tree.root, res.shipCellCount],
+              });
+            }
           }}
           randomize={randomBoard}
-        />
-        <PlacingCommit
-          gameId={gameId}
-          placement={placement}
-          onCommitted={() => {
-            /* useGame will refresh; nothing else to do */
-          }}
         />
       </div>
     );
@@ -175,53 +179,6 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
         </div>
       )}
     </motion.div>
-  );
-}
-
-// ---------------------------------------------------------------
-// Placing: commit the board to the contract after local placement.
-// ---------------------------------------------------------------
-function PlacingCommit({
-  gameId,
-  placement,
-  onCommitted,
-}: {
-  gameId: bigint;
-  placement: PlacementResult | null;
-  onCommitted: () => void;
-}) {
-  const { writeContract, isPending } = useWriteContract();
-  const { chain } = useAccount();
-  if (!placement) {
-    return (
-      <p className="mt-4 text-xs text-slate-400 text-center">
-        Place all 4 ships, then hit Ready.
-      </p>
-    );
-  }
-  return (
-    <div className="mt-4 text-center">
-      <Button
-        disabled={isPending}
-        onClick={() => {
-          if (!chain) return;
-          const proxy = gameProxyFor(chain.id);
-          writeContract(
-            {
-              address: proxy,
-              abi: gameAbi,
-              functionName: "commitBoard",
-              args: [gameId, placement.tree.root, placement.shipCellCount],
-            },
-            {
-              onSuccess: () => onCommitted(),
-            }
-          );
-        }}
-      >
-        {isPending ? "Committing..." : "Commit fleet on-chain"}
-      </Button>
-    </div>
   );
 }
 

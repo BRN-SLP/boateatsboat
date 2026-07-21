@@ -8,6 +8,7 @@ import { gameAbi } from "@/lib/game-abi";
 import { gameProxyFor } from "@/lib/game-config";
 import { motion } from "framer-motion";
 import { Flame } from "lucide-react";
+import { StarConnect } from "@/components/star-connect";
 
 interface Row {
   player: string;
@@ -123,7 +124,9 @@ export default function LeaderboardPage() {
               </p>
             </header>
 
-            <div className="w-28" />
+            <div className="flex w-28 justify-end pt-2">
+              <StarConnect size="sm" />
+            </div>
           </div>
 
           {/* Scrollable leaderboard list */}

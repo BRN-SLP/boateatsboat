@@ -46,7 +46,7 @@ export function BoardCell({
       transition={visual === "burning" ? { repeat: Infinity, duration: 0.7, ease: "easeInOut" } : undefined}
       aria-label={`cell ${x},${y} ${visual}`}
     >
-      {visual === "water" && <Splash theme={theme} />}
+      {visual === "water" && <MissMark />}
       {visual === "burning" && <Flame theme={theme} />}
       {visual === "sunk" && <SunkMark theme={theme} />}
       {visual === "hit" && <HitMark />}
@@ -57,7 +57,7 @@ export function BoardCell({
 const CELL_PALETTES = {
   inferno: {
     fog: { bg: "bg-sky-100/80 hover:bg-sky-200/80" },
-    water: { bg: "bg-sky-300/70" },
+    water: { bg: "bg-white/90 border-slate-400" },
     ship: { bg: "bg-slate-700" },
     hit: { bg: "bg-amber-500" },
     burning: { bg: "bg-orange-600" },
@@ -65,7 +65,7 @@ const CELL_PALETTES = {
   },
   classic: {
     fog: { bg: "bg-sky-100/80 hover:bg-sky-200/80" },
-    water: { bg: "bg-sky-300/70" },
+    water: { bg: "bg-white/90 border-slate-400" },
     ship: { bg: "bg-slate-700" },
     hit: { bg: "bg-blue-700" },
     burning: { bg: "bg-blue-800" },
@@ -82,6 +82,14 @@ function Splash({ theme }: { theme: "inferno" | "classic" }) {
       animate={{ scale: [0.4, 1.4, 0.6], opacity: [0.8, 0, 0] }}
       transition={{ duration: 0.8, ease: "easeOut" }}
     />
+  );
+}
+
+function MissMark() {
+  return (
+    <span className="absolute inset-0 m-auto flex items-center justify-center">
+      <span className="h-1/4 w-1/4 rounded-full bg-slate-400" />
+    </span>
   );
 }
 

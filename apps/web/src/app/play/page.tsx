@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAccount, useWriteContract, usePublicClient } from "wagmi";
 import { gameAbi } from "@/lib/game-abi";
 import { gameProxyFor } from "@/lib/game-config";
+import { StarConnect } from "@/components/star-connect";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -92,7 +93,9 @@ export default function PlayPage() {
               </p>
             </header>
 
-            <div className="w-28" />
+            <div className="flex w-28 justify-end pt-2">
+              <StarConnect size="sm" />
+            </div>
           </div>
 
           {/* Center: Action Cards */}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StarConnect } from "@/components/star-connect";
 
 export default function Home() {
   return (
@@ -54,26 +55,7 @@ export default function Home() {
 
             {/* Right: Connect Wallet Star */}
             <div className="relative z-10 pr-4 pt-2">
-              <button
-                aria-label="Connect Wallet"
-                className="star-btn group relative flex h-40 w-40 rotate-[15deg] items-center justify-center"
-              >
-                {/* Hand-drawn irregular star SVG */}
-                <svg
-                  className="absolute inset-0 h-full w-full fill-yellow-400 stroke-[#1a1a1a] stroke-[3px] drop-shadow-[4px_4px_0_rgba(26,26,26,1)]"
-                  viewBox="0 0 100 100"
-                >
-                  <path
-                    d="M50 5 L62 38 L95 40 L70 62 L78 95 L50 78 L22 95 L30 62 L5 40 L38 38 Z"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                <span className="relative z-10 block w-16 translate-y-[10px] -rotate-[15deg] text-center font-marker text-xs font-bold uppercase leading-tight text-black">
-                  Connect
-                  <br />
-                  Wallet
-                </span>
-              </button>
+              <StarConnect size="lg" />
             </div>
           </div>
 
