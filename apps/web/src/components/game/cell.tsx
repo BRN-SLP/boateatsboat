@@ -58,7 +58,7 @@ const CELL_PALETTES = {
   inferno: {
     fog: { bg: "bg-sky-100/80 hover:bg-sky-200/80" },
     water: { bg: "bg-white/90 border-slate-400" },
-    ship: { bg: "bg-slate-700" },
+    ship: { bg: "bg-transparent" },
     hit: { bg: "bg-amber-500" },
     burning: { bg: "bg-orange-600" },
     sunk: { bg: "bg-slate-800" },
@@ -66,7 +66,7 @@ const CELL_PALETTES = {
   classic: {
     fog: { bg: "bg-sky-100/80 hover:bg-sky-200/80" },
     water: { bg: "bg-white/90 border-slate-400" },
-    ship: { bg: "bg-slate-700" },
+    ship: { bg: "bg-transparent" },
     hit: { bg: "bg-blue-700" },
     burning: { bg: "bg-blue-800" },
     sunk: { bg: "bg-slate-900" },
