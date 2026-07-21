@@ -1,14 +1,16 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { GameView } from "@/components/game/game-view";
 import { StarConnect } from "@/components/star-connect";
 
 export default function GamePage() {
   const params = useParams<{ id: string }>();
-  const gameId = BigInt(params.id);
+  // Memoize — BigInt creates a new object every call, which would restart
+  // useEffect dependencies in child components on every render.
+  const gameId = useMemo(() => BigInt(params.id), [params.id]);
   const [theme, setTheme] = useState<"inferno" | "classic">("inferno");
 
   return (

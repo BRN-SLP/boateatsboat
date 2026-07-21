@@ -263,12 +263,16 @@ function ActiveBattle({
     };
 
     // 1. Load historical ShotResolved events for this game.
-    publicClient.getLogs({
-      address: proxy,
-      event: shotEvent,
-      args: { gameId },
-      fromBlock: 0n,
-      toBlock: "latest",
+    // Use a recent fromBlock — Celo rejects getLogs from genesis.
+    publicClient.getBlockNumber().then((currentBlock) => {
+      const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n;
+      return publicClient.getLogs({
+        address: proxy,
+        event: shotEvent,
+        args: { gameId },
+        fromBlock,
+        toBlock: "latest",
+      });
     }).then(applyLogs).catch(() => {});
 
     // 2. Watch for new events.
