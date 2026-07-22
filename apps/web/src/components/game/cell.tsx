@@ -122,8 +122,8 @@ function SunkMark({ theme }: { theme: "inferno" | "classic" }) {
 
 function HitMark() {
   return (
-    <span className="absolute inset-0 m-auto flex items-center justify-center text-[10px] text-white">
-      !
+    <span className="absolute inset-0 m-auto flex items-center justify-center text-base font-black text-white leading-none">
+      ✕
     </span>
   );
 }

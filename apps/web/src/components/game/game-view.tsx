@@ -6,7 +6,7 @@ import { useAccount, useWriteContract, usePublicClient } from "wagmi";
 import { useGame } from "@/hooks/use-game";
 import { gameAbi } from "@/lib/game-abi";
 import { gameProxyFor, BOARD_SIZE } from "@/lib/game-config";
-import { getProof } from "@/lib/merkle";
+import { getProof, buildMerkleTree } from "@/lib/merkle";
 import { randomBoard } from "@/lib/random-board";
 import { Board, emptyBoard, type BoardState, type CellVisual } from "./board";
 import { FleetPlacer, type PlacementResult } from "./fleet-placer";
@@ -20,6 +20,9 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
   const { writeContract } = useWriteContract();
 
   // Persist placement in localStorage so it survives page refresh.
+  // We store ONLY the types[] array (numbers) — the Merkle tree contains
+  // Uint8Array[][] layers which JSON.stringify mangles into objects, breaking
+  // getProof() after reload. Rebuild the tree from types on load instead.
   const storageKey = `beb-placement-${gameId}`;
   const [placement, setPlacement] = useState<PlacementResult | null>(() => {
     if (typeof window === "undefined") return null;
@@ -27,7 +30,13 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
       const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      return parsed as PlacementResult;
+      // Validate we got a 100-cell number array.
+      const types: number[] | undefined = parsed?.types;
+      if (!Array.isArray(types) || types.length !== BOARD_SIZE * BOARD_SIZE) return null;
+      if (!types.every((t) => typeof t === "number")) return null;
+      const tree = buildMerkleTree(types);
+      const shipCellCount = types.filter((t) => t !== 0).length;
+      return { types, tree, shipCellCount };
     } catch {
       return null;
     }
@@ -37,7 +46,8 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
     setPlacement(res);
     if (typeof window !== "undefined") {
       if (res) {
-        localStorage.setItem(storageKey, JSON.stringify(res));
+        // Store only the serializable parts — tree is rebuilt on load.
+        localStorage.setItem(storageKey, JSON.stringify({ types: res.types }));
       } else {
         localStorage.removeItem(storageKey);
       }
@@ -291,7 +301,7 @@ function ActiveBattle({
     const cells: CellVisual[] = [];
     for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
       const shot = enemyShots.get(i);
-      cells.push(shot === "hit" ? "burning" : shot === "miss" ? "water" : "fog");
+      cells.push(shot === "hit" ? "hit" : shot === "miss" ? "water" : "fog");
     }
     return { cells };
   }, [enemyShots]);
@@ -302,7 +312,7 @@ function ActiveBattle({
     for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
       const placed = placement?.types[i] ?? 0;
       const shot = myShots.get(i);
-      if (shot === "hit") cells.push("burning");
+      if (shot === "hit") cells.push("hit");
       else if (placed !== 0) cells.push("ship");
       else if (shot === "miss") cells.push("water");
       else cells.push("fog");
