@@ -82,9 +82,12 @@ PAYMENT_TOKEN=0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80 \
 - MiniPay auto-connect hook (scaffold-provided)
 - Celo skills: celopedia, celo-rpc, celo-stablecoins, minipay-integration, fee-abstraction
 
-## Status (2026-07-05)
+## Status (2026-07-23)
 
-- Contract: 14/14 tests, deployed Celo Sepolia.
-- Agent: ready, tsc-clean.
-- Web: production build green, 5 routes (/, /play, /game/[id], /leaderboard).
-- Pending: Vercel deploy, mainnet deploy after Sepolia validation, Farcaster frame, hero artwork.
+- Contract: 14/14 tests, deployed Celo Sepolia (UUPS proxy).
+- Agent: ready, tsc-clean. Joins free duels, plays hunt/target, answers shots with proofs.
+- Web: production build green. 5 routes (/, /play, /game/[id], /about, /leaderboard).
+  Doodle-zine fullscreen UI, no-scroll, star wallet button, ship sprites w/ team colors.
+- Game loop verified: create duel → AI joins → both commit Merkle roots → fire/respond → victory.
+- Deployed: https://boateatsboat.vercel.app
+- Pending: mainnet deploy after final review, Talent App registration (Proof of Ship S2).
