@@ -63,7 +63,7 @@ export function Board({
       {/* Column letters */}
       <div className="flex gap-[2px] pl-[18px]">
         {Array.from({ length: BOARD_SIZE }, (_, x) => (
-          <span key={x} className="flex-1 text-center text-[10px] text-slate-400 font-mono">
+          <span key={x} className="flex-1 text-center text-xs font-bold text-[#1a1a1a]">
             {colLetters[x]}
           </span>
         ))}
@@ -71,11 +71,11 @@ export function Board({
       {/* Body: row labels + cell area */}
       <div className="flex gap-[2px]">
         {/* Row labels */}
-        <div className="flex w-[16px] flex-col">
+        <div className="flex w-[18px] flex-col">
           {Array.from({ length: BOARD_SIZE }, (_, y) => (
             <span
               key={y}
-              className="flex flex-1 items-center justify-end pr-1 text-[10px] text-slate-400 font-mono"
+              className="flex flex-1 items-center justify-end pr-1 text-xs font-bold text-[#1a1a1a]"
             >
               {y + 1}
             </span>
