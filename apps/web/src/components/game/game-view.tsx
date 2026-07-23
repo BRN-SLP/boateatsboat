@@ -18,6 +18,18 @@ type Theme = "inferno" | "classic";
 // flags whether THIS shot destroyed the cell (drives sunk-ship detection).
 type ShotInfo = { kind: "hit" | "miss"; cellType?: number; destroyed?: boolean };
 
+// Map a hit outcome to its visual. Distinguishes armor-wounded, stealth-revealed
+// and destroyed cells so the player understands what each hit means.
+//   type 41 (Submarine stealth) -> stealth (revealed, 🤿)
+//   type 21 (Battleship armor), not destroyed -> armor (holds, 🛡️)
+//   any other hit, or an armor cell that IS destroyed -> hit (✕)
+function hitVisual(shot: ShotInfo): CellVisual {
+  const ct = shot.cellType ?? 0;
+  if (ct === 41) return "stealth";
+  if (ct >= 21 && ct < 41 && !shot.destroyed) return "armor";
+  return "hit";
+}
+
 export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
   const { game, pending, loading, error, myAddress } = useGame(gameId);
   const { chain } = useAccount();
@@ -307,7 +319,9 @@ function ActiveBattle({
     const cells: CellVisual[] = [];
     for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
       const shot = enemyShots.get(i);
-      cells.push(shot?.kind === "hit" ? "hit" : shot?.kind === "miss" ? "water" : "fog");
+      if (shot?.kind === "hit") cells.push(hitVisual(shot));
+      else if (shot?.kind === "miss") cells.push("water");
+      else cells.push("fog");
     }
     return { cells };
   }, [enemyShots]);
@@ -318,7 +332,7 @@ function ActiveBattle({
     for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
       const placed = placement?.types[i] ?? 0;
       const shot = myShots.get(i);
-      if (shot?.kind === "hit") cells.push("hit");
+      if (shot?.kind === "hit") cells.push(hitVisual(shot));
       else if (placed !== 0) cells.push("ship");
       else if (shot?.kind === "miss") cells.push("water");
       else cells.push("fog");

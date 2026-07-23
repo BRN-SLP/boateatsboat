@@ -7,7 +7,9 @@ export type CellVisual =
   | "fog" // unknown (enemy cell, not fired upon)
   | "water" // miss / confirmed empty
   | "ship" // own ship, intact
-  | "hit" // own ship, damaged (armor) or enemy confirmed hit
+  | "hit" // enemy confirmed hit (standard ship destroyed)
+  | "armor" // armored Battleship cell, hit but NOT destroyed yet (holds)
+  | "stealth" // submarine revealed by a hit
   | "burning" // ship on fire (Inferno theme, just hit)
   | "sunk"; // ship destroyed
 
@@ -50,6 +52,8 @@ export function BoardCell({
       {visual === "burning" && <Flame theme={theme} />}
       {visual === "sunk" && <SunkMark theme={theme} />}
       {visual === "hit" && <HitMark />}
+      {visual === "armor" && <ArmorMark />}
+      {visual === "stealth" && <StealthMark />}
     </motion.button>
   );
 }
@@ -60,6 +64,8 @@ const CELL_PALETTES = {
     water: { bg: "bg-white/90 border-slate-400" },
     ship: { bg: "bg-blue-200/50" },
     hit: { bg: "bg-amber-500" },
+    armor: { bg: "bg-zinc-600 ring-2 ring-zinc-900" },
+    stealth: { bg: "bg-cyan-600" },
     burning: { bg: "bg-orange-600" },
     sunk: { bg: "bg-slate-800" },
   },
@@ -68,6 +74,8 @@ const CELL_PALETTES = {
     water: { bg: "bg-white/90 border-slate-400" },
     ship: { bg: "bg-blue-200/50" },
     hit: { bg: "bg-blue-700" },
+    armor: { bg: "bg-slate-600 ring-2 ring-slate-900" },
+    stealth: { bg: "bg-teal-700" },
     burning: { bg: "bg-blue-800" },
     sunk: { bg: "bg-slate-900" },
   },
@@ -124,6 +132,24 @@ function HitMark() {
   return (
     <span className="absolute inset-0 m-auto flex items-center justify-center text-base font-black text-white leading-none">
       ✕
+    </span>
+  );
+}
+
+function ArmorMark() {
+  // Armored Battleship cell hit but NOT destroyed: armor holds.
+  return (
+    <span className="absolute inset-0 m-auto flex items-center justify-center text-sm leading-none">
+      🛡️
+    </span>
+  );
+}
+
+function StealthMark() {
+  // Submarine revealed by a hit (stealth broken).
+  return (
+    <span className="absolute inset-0 m-auto flex items-center justify-center text-sm leading-none">
+      🤿
     </span>
   );
 }
