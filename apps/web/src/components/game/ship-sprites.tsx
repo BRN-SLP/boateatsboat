@@ -43,23 +43,22 @@ export function ShipSprite({
 }: ShipSpriteProps) {
   const config = SHIP_IMAGES[type][fleet];
   const numCells = cells ?? config.cells;
-  const w = numCells * cellSize; // container spans the full run (5 cells)
+  const w = numCells * cellSize;
   const h = cellSize;
-  // Carrier art is squat; render the IMAGE at 80% of the container width
-  // (left-aligned at the bottom) so the ship looks narrower without
-  // shortening the 5-cell run it occupies.
-  const imgW = type === "carrier" ? w * 0.8 : w;
   const isSunk = state === "sunk";
   const opacity = isSunk ? 0.55 : state === "hit" ? 0.7 : 1;
+  // Carrier art is too squat for its 5-cell run; stretch it to fill the run
+  // (objectFit: fill) so it covers all 5 cells. Other ships keep contain.
+  const fit = type === "carrier" ? "fill" : "contain";
 
   return (
     <div style={{ width: w, height: h, opacity, position: "relative", display: "flex", alignItems: "flex-end" }}>
       <Image
         src={config.src}
         alt={`${fleet} ${type} ${state}`}
-        width={imgW}
+        width={w}
         height={h}
-        style={{ objectFit: "contain", objectPosition: "bottom", filter: isSunk ? "grayscale(1)" : undefined }}
+        style={{ objectFit: fit, objectPosition: "bottom", filter: isSunk ? "grayscale(1)" : undefined }}
       />
     </div>
   );
