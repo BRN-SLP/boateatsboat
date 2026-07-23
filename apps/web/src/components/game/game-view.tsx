@@ -253,10 +253,10 @@ function ActiveBattle({
     const compute = () => {
       const r = el.getBoundingClientRect();
       if (r.width <= 0 || r.height <= 0) return;
-      // Two boards side by side with a gap. Each board: 18px row-label column
-      // + 10 cells horizontally. Vertically a board is the column-letter row
-      // (cellSize) + 10 cell rows + ~20px title line.
-      const perBoardW = (r.width - 20) / 2;
+      // Three columns: board | info(176px) | board, plus two gaps (~3px each).
+      // Each board: 18px row-label column + 10 cells horizontally.
+      const infoColW = 176 + 6; // central info column width + gap allowance
+      const perBoardW = (r.width - infoColW) / 2;
       const byW = Math.floor((perBoardW - 18) / 10);
       // Height available for one board column. Account for the title (~20px)
       // and the column-letter row (~ one cell). So 11 cells worth + 20px.
@@ -473,42 +473,10 @@ function ActiveBattle({
 
   return (
     <div className="flex h-full flex-col gap-2">
-      {/* Status bar — fixed min-height so showing/hiding the action button
-          never reflows the boards below (no screen jump). */}
-      <div className="flex min-h-[2.5rem] shrink-0 items-center justify-center gap-3">
-        <StatusLine
-          myTurn={myTurn}
-          mustRespond={mustRespond}
-          cellsRemaining={cellsRemaining}
-        />
-        {mustRespond ? (
-          <button
-            disabled={isPending}
-            onClick={onRespond}
-            className="doodle-border doodle-shadow rounded-xl bg-[#d33a30] px-4 py-2 font-marker text-sm uppercase text-white disabled:opacity-40"
-          >
-            {isPending ? "Answering..." : "Answer shot (proof)"}
-          </button>
-        ) : (
-          <span className="invisible px-4 py-2 font-marker text-sm uppercase">&nbsp;</span>
-        )}
-      </div>
-
-      {/* Sunk enemy ships indicator — fixed line height to avoid reflow. */}
-      <div className="flex min-h-[1.5rem] shrink-0 flex-wrap items-center justify-center gap-2 overflow-hidden">
-        {sunkNames.map((name, i) => (
-          <span
-            key={i}
-            className="doodle-border doodle-shadow rounded-lg bg-[#1a1a1a] px-3 py-1 font-marker text-xs uppercase text-white"
-          >
-            🎯 {name} sunk!
-          </span>
-        ))}
-      </div>
-
-      {/* Two boards side by side. The container is measured and cellSize is
-          computed so both boards + labels fit without clipping or scroll. */}
-      <div ref={boardsRef} className="flex min-h-0 flex-1 items-center justify-center gap-5">
+      {/* Battle area: three columns — Their fleet | info | Your fleet.
+          The whole area is measured and cellSize computed so both boards +
+          the central info column fit one screen without scroll. */}
+      <div ref={boardsRef} className="flex min-h-0 flex-1 items-stretch justify-center gap-3">
         <BoardColumn
           title="Their fleet"
           subtitle={`${enemyCellsRemaining} cells afloat`}
@@ -520,6 +488,42 @@ function ActiveBattle({
           cellSize={cellSize}
           sunkShips={sunkRuns}
         />
+
+        {/* Central info column: turn status, action button, sunk ships, legend.
+            Fixed width so it never reflows the boards when content changes. */}
+        <div className="flex w-44 shrink-0 flex-col items-center justify-center gap-3">
+          <StatusLine
+            myTurn={myTurn}
+            mustRespond={mustRespond}
+            cellsRemaining={cellsRemaining}
+          />
+          {mustRespond ? (
+            <button
+              disabled={isPending}
+              onClick={onRespond}
+              className="doodle-border doodle-shadow rounded-xl bg-[#d33a30] px-3 py-2 text-center font-marker text-xs uppercase text-white disabled:opacity-40"
+            >
+              {isPending ? "Answering..." : "Answer shot"}
+            </button>
+          ) : (
+            <span className="px-3 py-2 font-marker text-xs uppercase opacity-0">&nbsp;</span>
+          )}
+
+          {/* Sunk enemy ships indicator */}
+          <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-1.5 overflow-hidden">
+            {sunkNames.map((name, i) => (
+              <span
+                key={i}
+                className="doodle-border doodle-shadow rounded-lg bg-[#1a1a1a] px-2 py-1 text-center font-marker text-[10px] uppercase text-white"
+              >
+                🎯 {name}
+              </span>
+            ))}
+          </div>
+
+          <FleetLegend />
+        </div>
+
         <BoardColumn
           title="Your fleet"
           subtitle={`${cellsRemaining} cells afloat`}
@@ -529,11 +533,6 @@ function ActiveBattle({
           fleet="blue"
           cellSize={cellSize}
         />
-      </div>
-
-      {/* Fleet legend — toggleable, collapsed by default. */}
-      <div className="flex shrink-0 justify-center">
-        <FleetLegend />
       </div>
     </div>
   );
@@ -653,7 +652,7 @@ function StatusLine({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -4 }}
         className={cn(
-          "text-sm font-medium",
+          "text-center text-xs font-medium leading-tight",
           tone === "rose" ? "text-rose-600" : tone === "emerald" ? "text-emerald-600" : "text-slate-500"
         )}
       >
