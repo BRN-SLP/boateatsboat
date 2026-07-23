@@ -76,12 +76,9 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     mapping(uint256 => Game) public games;
     // Monotonic nonce used to derive unpredictable game ids. The id itself is a
     // hash, not the nonce, so players cannot enumerate other people's duels.
-    uint256 public gameNonce;
-
-    // Free duels are not joined by the bot unless the creator explicitly
-    // requests it. Wagered duels never get a bot. This lets a player start a
-    // free "vs friend" duel and share the id without the bot snatching it.
-    mapping(uint256 => bool) public botRequested;
+    // Kept the original variable name (nextGameId) to preserve the storage slot
+    // across the UUPS upgrade; the value is no longer the game id itself.
+    uint256 public nextGameId;
 
     // cUSD (or any ERC-20) used for wagers and tournament entry fees. Set at init.
     IERC20 public paymentToken;
@@ -147,6 +144,11 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     // gameId -> (round, slot) within its tournament
     mapping(uint256 => uint16) public gameSlot;
     mapping(uint256 => uint8) public gameRound;
+
+    // Free duels are not joined by the bot unless the creator explicitly
+    // requests it. Wagered duels never get a bot. Placed LAST in storage so the
+    // upgrade does not shift any pre-existing variable slots.
+    mapping(uint256 => bool) public botRequested;
 
     // ---------------------------------------------------------------------
     // Events
@@ -216,7 +218,7 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /// @param _paymentToken cUSD (or any ERC-20) address for wagers and entry fees.
     function initialize(address _paymentToken) public virtual initializer {
         __Ownable_init(msg.sender);
-        gameNonce = 0;
+        nextGameId = 0;
         nextTournamentId = 1;
         paymentToken = IERC20(_paymentToken);
     }
@@ -225,9 +227,9 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     ///      (available on Celo PoS) mixed with the caller and a monotonic nonce so
     ///      that ids cannot be enumerated in order by third parties.
     function _newGameId() internal returns (uint256 id) {
-        gameNonce++;
+        nextGameId++;
         id = uint256(
-            keccak256(abi.encodePacked(msg.sender, block.prevrandao, gameNonce, block.timestamp))
+            keccak256(abi.encodePacked(msg.sender, block.prevrandao, nextGameId, block.timestamp))
         );
         // Ensure non-zero (games[0] stays an empty sentinel).
         if (id == 0) id = 1;
@@ -491,7 +493,7 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function gameCount() external view returns (uint256) {
-        return gameNonce;
+        return nextGameId;
     }
 
     // ---------------------------------------------------------------------

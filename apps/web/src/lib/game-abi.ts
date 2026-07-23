@@ -106,7 +106,7 @@ export const gameAbi = [
     outputs: [],
   },
   {
-    name: "gameNonce",
+    name: "nextGameId",
     type: "function",
     stateMutability: "view",
     inputs: [],

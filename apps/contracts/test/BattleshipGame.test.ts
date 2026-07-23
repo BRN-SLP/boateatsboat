@@ -102,7 +102,7 @@ describe("BattleshipGame", function () {
     const g = await deploy();
     const ownerAddr = (await g.read.owner()) as `0x${string}`;
     expect(getAddress(ownerAddr)).to.equal(getAddress(owner.account.address));
-    expect((await g.read.gameNonce()).toString()).to.equal("0");
+    expect((await g.read.nextGameId()).toString()).to.equal("0");
   });
 
   it("creates a duel with a wager", async () => {
