@@ -343,12 +343,20 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             g.players[ps.shooterIdx].shotsHit += 1;
         }
 
+        // Cache pending-shot fields BEFORE delete — once pendingShots[gameId] is
+        // zeroed, the `ps` storage pointer reads back 0 for every field, which
+        // would corrupt the ShotResolved event (x/y always emit as 0) and the
+        // shooter index used to finish the game.
+        uint8 shotX = ps.x;
+        uint8 shotY = ps.y;
+        uint8 shooterIdx = ps.shooterIdx;
+
         delete pendingShots[gameId];
         g.lastActionAt = block.timestamp;
-        emit ShotResolved(gameId, defenderIdx, ps.x, ps.y, cellType, hit, armored, stealth, sunk);
+        emit ShotResolved(gameId, defenderIdx, shotX, shotY, cellType, hit, armored, stealth, sunk);
 
         if (sunk || _allShipsSunk(g)) {
-            _finishGame(gameId, ps.shooterIdx, false);
+            _finishGame(gameId, shooterIdx, false);
             return;
         }
 

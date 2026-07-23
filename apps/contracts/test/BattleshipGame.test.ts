@@ -165,6 +165,39 @@ describe("BattleshipGame", function () {
     expect(Number(game.players[0].shotsHit)).to.equal(1);
   });
 
+  it("emits ShotResolved with the ACTUAL fired coordinates (not 0,0)", async () => {
+    // Regression: the contract used to `delete pendingShots[gameId]` BEFORE
+    // emitting ShotResolved, zeroing ps.x/ps.y so every shot resolved as (0,0).
+    const g = await deploy();
+    await g.write.createDuel([0n], { account: alice.account });
+    await g.write.joinDuel([1n], { account: bob.account });
+    const aliceBoard = buildTestBoard();
+    const bobBoard = buildTestBoard();
+    const aliceTree = buildMerkleTree(aliceBoard);
+    const bobTree = buildMerkleTree(bobBoard);
+    await g.write.commitBoard([1n, aliceTree.root, FLEET_CELLS], { account: alice.account });
+    await g.write.commitBoard([1n, bobTree.root, FLEET_CELLS], { account: bob.account });
+
+    // Alice fires at (7,2) — deliberately NOT (0,0). Cell index 27 is water.
+    const tx = await g.write.fire([1n, 7, 2], { account: alice.account });
+    const proof = getProof(bobTree, 27); // water cell
+    const respTx = await g.write.respondShot([1n, 0, proof], { account: bob.account });
+
+    // Find the ShotResolved event in the respondShot receipt.
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: respTx });
+    const log = receipt.logs.find((l: any) => l.address.toLowerCase() === (g as any)._address.toLowerCase());
+    expect(log, "ShotResolved log should exist").to.exist;
+    // Non-indexed args start at data offset 0: x, y, cellType, hit, ...
+    // topic0 = keccak(ShotResolved sig), topic1=gameId, topic2=defenderIdx.
+    // The data field holds the non-indexed params ABI-encoded.
+    const data = (log as any).data;
+    // First two words = x and y (each padded to 32 bytes).
+    const x = Number(BigInt(data.slice(0, 66)));
+    const y = Number(BigInt("0x" + data.slice(66, 130)));
+    expect(x).to.equal(7, "ShotResolved.x must match fired coordinate");
+    expect(y).to.equal(2, "ShotResolved.y must match fired coordinate");
+  });
+
   it("resolves a miss and still flips turn", async () => {
     const g = await deploy();
     await g.write.createDuel([0n], { account: alice.account });
