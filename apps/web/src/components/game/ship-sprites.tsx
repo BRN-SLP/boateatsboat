@@ -47,9 +47,6 @@ export function ShipSprite({
   const h = cellSize;
   const isSunk = state === "sunk";
   const opacity = isSunk ? 0.55 : state === "hit" ? 0.7 : 1;
-  // Carrier art is too squat for its 5-cell run; stretch it to fill the run
-  // (objectFit: fill) so it covers all 5 cells. Other ships keep contain.
-  const fit = type === "carrier" ? "fill" : "contain";
 
   return (
     <div style={{ width: w, height: h, opacity, position: "relative", display: "flex", alignItems: "flex-end" }}>
@@ -58,7 +55,7 @@ export function ShipSprite({
         alt={`${fleet} ${type} ${state}`}
         width={w}
         height={h}
-        style={{ objectFit: fit, objectPosition: "bottom", filter: isSunk ? "grayscale(1)" : undefined }}
+        style={{ objectFit: "contain", objectPosition: "bottom", filter: isSunk ? "grayscale(1)" : undefined }}
       />
     </div>
   );
