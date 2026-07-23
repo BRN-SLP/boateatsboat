@@ -48,13 +48,13 @@ export function ShipSprite({
   const opacity = state === "sunk" ? 0.4 : state === "hit" ? 0.7 : 1;
 
   return (
-    <div style={{ width: w, height: h, opacity, position: "relative" }}>
+    <div style={{ width: w, height: h, opacity, position: "relative", display: "flex", alignItems: "flex-end" }}>
       <Image
         src={config.src}
         alt={`${fleet} ${type} ${state}`}
         width={w}
         height={h}
-        style={{ objectFit: "contain" }}
+        style={{ objectFit: "contain", objectPosition: "bottom" }}
       />
       {state === "sunk" && (
         <div
