@@ -524,8 +524,6 @@ function ActiveBattle({
               </span>
             ))}
           </div>
-
-          <FleetLegend />
         </div>
 
         <BoardColumn
@@ -537,6 +535,11 @@ function ActiveBattle({
           fleet="blue"
           cellSize={cellSize}
         />
+      </div>
+
+      {/* Fleet legend — toggleable, collapsed by default, at the bottom. */}
+      <div className="flex shrink-0 justify-center">
+        <FleetLegend />
       </div>
     </div>
   );
@@ -638,20 +641,21 @@ function StatusLine({
   mustRespond: boolean;
   cellsRemaining: number;
 }) {
-  let text = "Opponent's turn — waiting for their move...";
+  let lines: string[] = ["Opponent's turn", "waiting for their move..."];
   let tone: "rose" | "emerald" | "slate" = "slate";
   if (mustRespond) {
-    text = "Incoming shot! Answer with proof.";
+    lines = ["Incoming shot!", "Answer with proof."];
     tone = "rose";
   } else if (myTurn) {
-    text = "Your turn — fire at their fleet.";
+    lines = ["Your turn", "fire at their fleet."];
     tone = "emerald";
   }
   void cellsRemaining;
+  const key = lines.join("|");
   return (
     <AnimatePresence mode="wait">
       <motion.p
-        key={text}
+        key={key}
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -4 }}
@@ -660,7 +664,9 @@ function StatusLine({
           tone === "rose" ? "text-rose-600" : tone === "emerald" ? "text-emerald-600" : "text-slate-500"
         )}
       >
-        {text}
+        {lines.map((l, i) => (
+          <span key={i} className="block">{l}</span>
+        ))}
       </motion.p>
     </AnimatePresence>
   );
