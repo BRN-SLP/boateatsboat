@@ -74,7 +74,14 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     mapping(uint256 => Game) public games;
-    uint256 public nextGameId;
+    // Monotonic nonce used to derive unpredictable game ids. The id itself is a
+    // hash, not the nonce, so players cannot enumerate other people's duels.
+    uint256 public gameNonce;
+
+    // Free duels are not joined by the bot unless the creator explicitly
+    // requests it. Wagered duels never get a bot. This lets a player start a
+    // free "vs friend" duel and share the id without the bot snatching it.
+    mapping(uint256 => bool) public botRequested;
 
     // cUSD (or any ERC-20) used for wagers and tournament entry fees. Set at init.
     IERC20 public paymentToken;
@@ -147,6 +154,8 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
     event GameCreated(uint256 indexed gameId, address indexed creator, uint256 wager);
     event OpponentJoined(uint256 indexed gameId, address indexed opponent);
+    // Emitted when a duel creator asks the off-chain bot to auto-join.
+    event BotRequested(uint256 indexed gameId);
     event BoardCommitted(uint256 indexed gameId, uint8 indexed playerIdx);
     event GameStarted(uint256 indexed gameId, uint8 firstTurn);
     event ShotFired(uint256 indexed gameId, uint8 indexed shooterIdx, uint8 x, uint8 y);
@@ -207,9 +216,21 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /// @param _paymentToken cUSD (or any ERC-20) address for wagers and entry fees.
     function initialize(address _paymentToken) public virtual initializer {
         __Ownable_init(msg.sender);
-        nextGameId = 1;
+        gameNonce = 0;
         nextTournamentId = 1;
         paymentToken = IERC20(_paymentToken);
+    }
+
+    /// @dev Derive a fresh, unpredictable, non-zero game id. Uses block.prevrandao
+    ///      (available on Celo PoS) mixed with the caller and a monotonic nonce so
+    ///      that ids cannot be enumerated in order by third parties.
+    function _newGameId() internal returns (uint256 id) {
+        gameNonce++;
+        id = uint256(
+            keccak256(abi.encodePacked(msg.sender, block.prevrandao, gameNonce, block.timestamp))
+        );
+        // Ensure non-zero (games[0] stays an empty sentinel).
+        if (id == 0) id = 1;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -226,7 +247,7 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     /// @notice Create a new duel with an optional cUSD wager. Caller is player 0.
     /// Wager is escrowed into the contract on creation.
     function createDuel(uint256 wager) external returns (uint256 gameId) {
-        gameId = nextGameId++;
+        gameId = _newGameId();
         Game storage g = games[gameId];
         g.state = GameState.Open;
         g.players[0].account = msg.sender;
@@ -250,6 +271,17 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         g.state = GameState.Placing;
         g.lastActionAt = block.timestamp;
         emit OpponentJoined(gameId, msg.sender);
+    }
+
+    /// @notice The duel creator asks the off-chain bot to auto-join this free duel.
+    /// Only callable by player 0 while the duel is still Open and free.
+    function requestBot(uint256 gameId) external {
+        Game storage g = games[gameId];
+        if (g.state != GameState.Open) revert InvalidBoard();
+        if (msg.sender != g.players[0].account) revert NotParticipant();
+        if (g.wager > 0) revert WagerMismatch();
+        botRequested[gameId] = true;
+        emit BotRequested(gameId);
     }
 
     /// @notice Commit a board layout as a Merkle root. cellShipCount = number of occupied cells.
@@ -459,7 +491,7 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function gameCount() external view returns (uint256) {
-        return nextGameId - 1;
+        return gameNonce;
     }
 
     // ---------------------------------------------------------------------
@@ -542,7 +574,7 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
                 continue;
             }
             // Create a tournament duel: free (entry fee already escrowed).
-            uint256 gameId = nextGameId++;
+            uint256 gameId = _newGameId();
             Game storage g = games[gameId];
             g.state = GameState.Placing; // skip Open; both players known
             g.players[0].account = a;

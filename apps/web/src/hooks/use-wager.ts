@@ -19,7 +19,7 @@ export function useCreateDuel() {
   const [error, setError] = useState<string | null>(null);
 
   const create = useCallback(
-    async (wager: bigint): Promise<bigint | null> => {
+    async (wager: bigint, vsBot = false): Promise<bigint | null> => {
       if (!chain || !publicClient) {
         setError("Connect your wallet first");
         return null;
@@ -49,14 +49,28 @@ export function useCreateDuel() {
           args: [wager],
         });
         const receipt = await publicClient.waitForTransactionReceipt({ hash: createTx });
-        // GameCreated is indexed by gameId (topic1).
+        // GameCreated is indexed by gameId (topic1). Filter by its topic0 to avoid
+        // matching other events that also carry an indexed first arg.
+        const GAME_CREATED_TOPIC = "0x7dfb67e9ff596fca4da65c7eedb128cd1aac553af54b3c0cb733625a2480d8bd";
         const log = receipt.logs.find(
-          (l) => l.address.toLowerCase() === proxy.toLowerCase() && l.topics.length > 1
+          (l) =>
+            l.address.toLowerCase() === proxy.toLowerCase() &&
+            l.topics[0]?.toLowerCase() === GAME_CREATED_TOPIC &&
+            l.topics.length > 1
         );
-        if (log && log.topics[1]) {
-          return BigInt(log.topics[1]);
+        if (!log || !log.topics[1]) return null;
+        const gameId = BigInt(log.topics[1]);
+        // For the "vs AI" free mode, summon the bot so it auto-joins this duel.
+        if (vsBot && wager === 0n) {
+          const botTx = await writeContractAsync({
+            address: proxy,
+            abi: gameAbi,
+            functionName: "requestBot",
+            args: [gameId],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: botTx });
         }
-        return null;
+        return gameId;
       } catch (e) {
         const err = e as Error & { shortMessage?: string };
         setError(err.shortMessage || err.message || "Transaction failed");

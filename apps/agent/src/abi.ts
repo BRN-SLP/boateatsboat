@@ -94,11 +94,18 @@ export const gameAbi = [
     outputs: [],
   },
   {
-    name: "nextGameId",
+    name: "gameNonce",
     type: "function",
     stateMutability: "view",
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "botRequested",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }],
   },
   {
     name: "GameCreated",
@@ -107,6 +114,21 @@ export const gameAbi = [
       { name: "gameId", type: "uint256", indexed: true },
       { name: "creator", type: "address", indexed: true },
       { name: "wager", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "BotRequested",
+    type: "event",
+    inputs: [
+      { name: "gameId", type: "uint256", indexed: true },
+    ],
+  },
+  {
+    name: "OpponentJoined",
+    type: "event",
+    inputs: [
+      { name: "gameId", type: "uint256", indexed: true },
+      { name: "opponent", type: "address", indexed: true },
     ],
   },
 ] as const;

@@ -29,6 +29,11 @@ export default function PlayPage() {
   const [customWager, setCustomWager] = useState<string>("");
   const [useCustom, setUseCustom] = useState(false);
   const [joinId, setJoinId] = useState("");
+  // In free mode: vs AI (bot auto-joins) or vs Friend (wait for a human by id).
+  const [vsBot, setVsBot] = useState(true);
+  // When a vs-Friend duel is created we show its shareable code before navigating.
+  const [friendCode, setFriendCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const wager = (() => {
     if (mode === "friendly") return 0n;
@@ -42,8 +47,29 @@ export default function PlayPage() {
   })();
 
   const onCreate = async () => {
-    const id = await createDuel(wager);
-    if (id !== null) router.push(`/game/${id}`);
+    const id = await createDuel(wager, mode === "friendly" ? vsBot : false);
+    if (id === null) return;
+    if (mode === "friendly" && !vsBot) {
+      // vs Friend: reveal the shareable game code, don't navigate yet.
+      setFriendCode(id.toString());
+      setCopied(false);
+      return;
+    }
+    router.push(`/game/${id}`);
+  };
+
+  const copyCode = async () => {
+    if (!friendCode) return;
+    try {
+      await navigator.clipboard.writeText(friendCode);
+      setCopied(true);
+    } catch {
+      // clipboard may be unavailable; ignore
+    }
+  };
+
+  const openFriendGame = () => {
+    if (friendCode) router.push(`/game/${friendCode}`);
   };
 
   const onJoin = async () => {
@@ -92,24 +118,76 @@ export default function PlayPage() {
             <div className="grid w-full max-w-3xl gap-5 sm:grid-cols-2">
               {/* Friendly */}
               <ModeCard
-                title="Play vs AI (free)"
+                title="Free duel"
                 emoji="🤖"
                 active={mode === "friendly"}
                 onClick={() => setMode("friendly")}
                 rotate="-rotate-2"
               >
                 <p className="text-xs leading-relaxed text-[#1a1a1a]/60">
-                  No stakes. A hunt/target AI opponent joins your open duel
-                  within seconds and plays back automatically. Real on-chain
-                  shots, real Merkle proofs — perfect for practice.
+                  No stakes. Real on-chain shots, real Merkle proofs.
                 </p>
-                <button
-                  disabled={!address || busy || mode !== "friendly"}
-                  onClick={onCreate}
-                  className="play-btn doodle-shadow-large mt-auto rounded-2xl border-[3px] border-[#1a1a1a] bg-[#257ABB] px-6 py-3 font-marker text-xl uppercase tracking-wider text-white disabled:opacity-40"
-                >
-                  {createPending && mode === "friendly" ? "Deploying..." : "Fight the AI"}
-                </button>
+                {/* Opponent toggle: AI bot (auto-join) vs Friend (share code). */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={mode !== "friendly"}
+                    onClick={() => setVsBot(true)}
+                    className={cn(
+                      "doodle-border flex-1 rounded-lg px-2 py-1.5 font-marker text-xs uppercase",
+                      mode === "friendly" && vsBot ? "bg-[#1a1a1a] text-white" : "bg-white text-[#1a1a1a]"
+                    )}
+                  >
+                    🤖 vs AI
+                  </button>
+                  <button
+                    type="button"
+                    disabled={mode !== "friendly"}
+                    onClick={() => setVsBot(false)}
+                    className={cn(
+                      "doodle-border flex-1 rounded-lg px-2 py-1.5 font-marker text-xs uppercase",
+                      mode === "friendly" && !vsBot ? "bg-[#1a1a1a] text-white" : "bg-white text-[#1a1a1a]"
+                    )}
+                  >
+                    🤝 vs Friend
+                  </button>
+                </div>
+                {mode === "friendly" && !vsBot && friendCode ? (
+                  // vs Friend: show the shareable game code with copy + open.
+                  <div className="flex flex-col gap-2">
+                    <p className="text-center font-marker text-[10px] uppercase text-[#1a1a1a]/60">
+                      Share this game code with your friend:
+                    </p>
+                    <div className="doodle-border flex items-center gap-1 rounded-md bg-white px-2 py-1">
+                      <code className="flex-1 truncate font-mono text-sm text-[#1a1a1a]">{friendCode}</code>
+                      <button
+                        type="button"
+                        onClick={copyCode}
+                        className="rounded bg-[#257ABB] px-2 py-0.5 font-marker text-[10px] uppercase text-white"
+                      >
+                        {copied ? "✓ Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <button
+                      onClick={openFriendGame}
+                      className="play-btn doodle-shadow-large rounded-2xl border-[3px] border-[#1a1a1a] bg-[#257ABB] px-6 py-2 font-marker text-base uppercase tracking-wider text-white"
+                    >
+                      Open my duel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    disabled={!address || busy || mode !== "friendly"}
+                    onClick={onCreate}
+                    className="play-btn doodle-shadow-large mt-auto rounded-2xl border-[3px] border-[#1a1a1a] bg-[#257ABB] px-6 py-3 font-marker text-xl uppercase tracking-wider text-white disabled:opacity-40"
+                  >
+                    {createPending && mode === "friendly"
+                      ? "Deploying..."
+                      : vsBot
+                      ? "Fight the AI"
+                      : "Create & get code"}
+                  </button>
+                )}
               </ModeCard>
 
               {/* Money */}

@@ -32,13 +32,32 @@ async function main() {
   tick();
 }
 
-async function catchUpExistingGames() {
-  const nextId = (await publicClient.readContract({
+// Read every GameCreated log within a recent block window and consider those
+// games. Game ids are now random (not sequential), so we discover them via the
+// GameCreated event rather than iterating 1..n.
+async function recentGameIds(): Promise<bigint[]> {
+  const currentBlock = await publicClient.getBlockNumber();
+  const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n;
+  const logs = await publicClient.getLogs({
     address: gameAddress,
-    abi: gameAbi,
-    functionName: "nextGameId",
-  })) as bigint;
-  for (let id = 1n; id < nextId; id++) {
+    event: {
+      type: "event",
+      name: "GameCreated",
+      inputs: [
+        { name: "gameId", type: "uint256", indexed: true },
+        { name: "creator", type: "address", indexed: true },
+        { name: "wager", type: "uint256", indexed: false },
+      ],
+    },
+    fromBlock,
+    toBlock: "latest",
+  });
+  return logs.map((l) => (l.args as any).gameId as bigint);
+}
+
+async function catchUpExistingGames() {
+  const ids = await recentGameIds();
+  for (const id of ids) {
     try {
       await considerGame(id);
     } catch (e) {
@@ -49,12 +68,8 @@ async function catchUpExistingGames() {
 
 async function tick() {
   try {
-    const nextId = (await publicClient.readContract({
-      address: gameAddress,
-      abi: gameAbi,
-      functionName: "nextGameId",
-    })) as bigint;
-    for (let id = 1n; id < nextId; id++) {
+    const ids = await recentGameIds();
+    for (const id of ids) {
       try {
         await considerGame(id);
       } catch (e) {
@@ -86,12 +101,20 @@ async function considerGame(gameId: bigint) {
   const p1 = (game.players[1].account ?? "").toLowerCase();
   const me = AGENT_ADDRESS.toLowerCase();
 
-  // Open: join if we are not already the creator and there is no opponent yet.
+  // Open: join ONLY if the creator explicitly requested the bot. This lets a
+  // player start a free "vs friend" duel and share the id without the bot
+  // snatching it. Agent never joins wagered duels.
   if (state === 0) {
     if (p0.toLowerCase() === me) return; // we created it, wait
     if (p1.toLowerCase() === me) return;
-    // Don't auto-join games with a wager > 0 (agent plays free duels only).
     if (game.wager > 0n) return;
+    const wantBot = await publicClient.readContract({
+      address: gameAddress,
+      abi: gameAbi,
+      functionName: "botRequested",
+      args: [gameId],
+    });
+    if (!wantBot) return;
     await joinGame(gameId);
     return;
   }

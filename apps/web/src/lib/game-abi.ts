@@ -106,11 +106,25 @@ export const gameAbi = [
     outputs: [],
   },
   {
-    name: "nextGameId",
+    name: "gameNonce",
     type: "function",
     stateMutability: "view",
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "requestBot",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "gameId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "botRequested",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "", type: "uint256" }],
+    outputs: [{ name: "", type: "bool" }],
   },
   {
     name: "elo",
