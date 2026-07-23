@@ -254,6 +254,7 @@ async function syncResolvedShots(gameId: bigint, ag: AgentGame, myIdx: 0 | 1) {
           { name: "armored", type: "bool", indexed: false },
           { name: "stealth", type: "bool", indexed: false },
           { name: "sunk", type: "bool", indexed: false },
+          { name: "cellDestroyed", type: "bool", indexed: false },
         ],
       },
       args: { gameId },

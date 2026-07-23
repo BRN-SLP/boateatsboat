@@ -14,6 +14,10 @@ import { cn } from "@/lib/utils";
 
 type Theme = "inferno" | "classic";
 
+// Per-cell shot outcome. For hits, cellType is the revealed type and destroyed
+// flags whether THIS shot destroyed the cell (drives sunk-ship detection).
+type ShotInfo = { kind: "hit" | "miss"; cellType?: number; destroyed?: boolean };
+
 export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
   const { game, pending, loading, error, myAddress } = useGame(gameId);
   const { chain } = useAccount();
@@ -54,10 +58,10 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
     }
   }, [storageKey]);
 
-  // Enemy board: shots I have fired (hit/miss markers).
-  const [enemyShots, setEnemyShots] = useState<Map<number, "hit" | "miss">>(new Map());
+  // Enemy board: shots I have fired. Value carries hit/miss + reveal details.
+  const [enemyShots, setEnemyShots] = useState<Map<number, ShotInfo>>(new Map());
   // My board: shots opponent has fired at me.
-  const [myShots, setMyShots] = useState<Map<number, "hit" | "miss">>(new Map());
+  const [myShots, setMyShots] = useState<Map<number, ShotInfo>>(new Map());
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500">Loading the bathtub...</div>;
@@ -212,10 +216,10 @@ function ActiveBattle({
   gameId: bigint;
   meIdx: number;
   placement: PlacementResult | null;
-  enemyShots: Map<number, "hit" | "miss">;
-  setEnemyShots: React.Dispatch<React.SetStateAction<Map<number, "hit" | "miss">>>;
-  myShots: Map<number, "hit" | "miss">;
-  setMyShots: React.Dispatch<React.SetStateAction<Map<number, "hit" | "miss">>>;
+  enemyShots: Map<number, ShotInfo>;
+  setEnemyShots: React.Dispatch<React.SetStateAction<Map<number, ShotInfo>>>;
+  myShots: Map<number, ShotInfo>;
+  setMyShots: React.Dispatch<React.SetStateAction<Map<number, ShotInfo>>>;
   pending: { active: boolean; shooterIdx: number; x: number; y: number } | null;
   theme: Theme;
   cellsRemaining: number;
@@ -247,25 +251,27 @@ function ActiveBattle({
         { name: "armored", type: "bool", indexed: false },
         { name: "stealth", type: "bool", indexed: false },
         { name: "sunk", type: "bool", indexed: false },
+        { name: "cellDestroyed", type: "bool", indexed: false },
       ],
     } as const;
 
     const applyLogs = (logs: any[]) => {
       for (const log of logs) {
-        const { defenderIdx, x, y, hit } = log.args ?? {};
+        const { defenderIdx, x, y, hit, cellType, cellDestroyed } = log.args ?? {};
         if (x == null || y == null) continue;
         const idx = Number(y) * BOARD_SIZE + Number(x);
         const isHit = Boolean(hit);
+        const info = { kind: (isHit ? "hit" : "miss") as "hit" | "miss", cellType: Number(cellType), destroyed: Boolean(cellDestroyed) };
         if (Number(defenderIdx) === meIdx) {
           setMyShots((prev) => {
             const next = new Map(prev);
-            next.set(idx, isHit ? "hit" : "miss");
+            next.set(idx, info);
             return next;
           });
         } else {
           setEnemyShots((prev) => {
             const next = new Map(prev);
-            next.set(idx, isHit ? "hit" : "miss");
+            next.set(idx, info);
             return next;
           });
         }
@@ -301,7 +307,7 @@ function ActiveBattle({
     const cells: CellVisual[] = [];
     for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
       const shot = enemyShots.get(i);
-      cells.push(shot === "hit" ? "hit" : shot === "miss" ? "water" : "fog");
+      cells.push(shot?.kind === "hit" ? "hit" : shot?.kind === "miss" ? "water" : "fog");
     }
     return { cells };
   }, [enemyShots]);
@@ -312,13 +318,57 @@ function ActiveBattle({
     for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
       const placed = placement?.types[i] ?? 0;
       const shot = myShots.get(i);
-      if (shot === "hit") cells.push("hit");
+      if (shot?.kind === "hit") cells.push("hit");
       else if (placed !== 0) cells.push("ship");
-      else if (shot === "miss") cells.push("water");
+      else if (shot?.kind === "miss") cells.push("water");
       else cells.push("fog");
     }
     return { cells };
   }, [placement, myShots]);
+
+  // Detect sunk enemy ships from revealed hits. Group adjacent destroyed cells
+  // of the same type into a ship run; a ship is sunk when every cell in the run
+  // is destroyed. carrier=5/type1, cruiser=3/type1, battleship=4/type21, sub=3/type41.
+  const sunkEnemyShips = useMemo<string[]>(() => {
+    const destroyed = new Set<number>();
+    const types = new Map<number, number>();
+    for (const [idx, info] of enemyShots) {
+      if (info.kind === "hit" && info.destroyed) {
+        destroyed.add(idx);
+        if (info.cellType != null) types.set(idx, info.cellType);
+      }
+    }
+    const result: string[] = [];
+    const visited = new Set<number>();
+    for (const start of destroyed) {
+      if (visited.has(start)) continue;
+      const t = types.get(start) ?? 1;
+      // Expand run horizontally and vertically from start, same type.
+      const run = [start];
+      visited.add(start);
+      const expand = (idx: number, dx: number, dy: number) => {
+        let cx = idx % BOARD_SIZE, cy = Math.floor(idx / BOARD_SIZE);
+        for (;;) {
+          cx += dx; cy += dy;
+          if (cx < 0 || cx >= BOARD_SIZE || cy < 0 || cy >= BOARD_SIZE) break;
+          const n = cy * BOARD_SIZE + cx;
+          if (destroyed.has(n) && (types.get(n) ?? 1) === t) { run.push(n); visited.add(n); }
+          else break;
+        }
+      };
+      expand(start, 1, 0); expand(start, -1, 0);
+      expand(start, 0, 1); expand(start, 0, -1);
+      // Classify by (type, length).
+      const len = run.length;
+      let name: string | null = null;
+      if (t === 41 && len >= 3) name = "Submarine";
+      else if (t === 21 && len >= 4) name = "Battleship";
+      else if (t === 1 && len >= 5) name = "Carrier";
+      else if (t === 1 && len >= 3) name = "Cruiser";
+      if (name) result.push(name);
+    }
+    return result;
+  }, [enemyShots]);
 
   const onFire = useCallback(
     (x: number, y: number) => {
@@ -357,9 +407,11 @@ function ActiveBattle({
       },
       {
         onSuccess: () => {
+          // Optimistic mark until the ShotResolved event confirms. For hits we
+          // cannot know destroyed/armor yet, so only set kind + revealed type.
           setMyShots((prev) => {
             const next = new Map(prev);
-            next.set(idx, cellType === 0 ? "miss" : "hit");
+            next.set(idx, { kind: cellType === 0 ? "miss" : "hit", cellType });
             return next;
           });
         },
@@ -386,6 +438,20 @@ function ActiveBattle({
           </button>
         )}
       </div>
+
+      {/* Sunk enemy ships indicator */}
+      {sunkEnemyShips.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {sunkEnemyShips.map((name, i) => (
+            <span
+              key={i}
+              className="doodle-border doodle-shadow rounded-lg bg-[#1a1a1a] px-3 py-1 font-marker text-xs uppercase text-white"
+            >
+              🎯 {name} sunk!
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Two boards side by side */}
       <div className="flex flex-wrap items-start justify-center gap-4">
@@ -454,9 +520,16 @@ function StatusLine({
   mustRespond: boolean;
   cellsRemaining: number;
 }) {
-  let text = "Waiting...";
-  if (mustRespond) text = "Incoming shot! Answer with proof.";
-  else if (myTurn) text = "Your turn -- fire at their fleet.";
+  let text = "Opponent's turn — waiting for their move...";
+  let tone: "rose" | "emerald" | "slate" = "slate";
+  if (mustRespond) {
+    text = "Incoming shot! Answer with proof.";
+    tone = "rose";
+  } else if (myTurn) {
+    text = "Your turn — fire at their fleet.";
+    tone = "emerald";
+  }
+  void cellsRemaining;
   return (
     <AnimatePresence mode="wait">
       <motion.p
@@ -466,7 +539,7 @@ function StatusLine({
         exit={{ opacity: 0, y: -4 }}
         className={cn(
           "text-sm font-medium",
-          mustRespond ? "text-rose-600" : myTurn ? "text-emerald-600" : "text-slate-500"
+          tone === "rose" ? "text-rose-600" : tone === "emerald" ? "text-emerald-600" : "text-slate-500"
         )}
       >
         {text}

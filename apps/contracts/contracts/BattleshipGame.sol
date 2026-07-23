@@ -159,7 +159,8 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bool hit,
         bool armored,
         bool stealth,
-        bool sunk
+        bool sunk,
+        bool cellDestroyed
     );
     event GameFinished(uint256 indexed gameId, address indexed winner, bool byForfeit);
     event WagerClaimed(uint256 indexed gameId, address indexed winner, uint256 amount);
@@ -357,7 +358,7 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
 
         delete pendingShots[gameId];
         g.lastActionAt = block.timestamp;
-        emit ShotResolved(gameId, defenderIdx, shotX, shotY, cellType, hit, armored, stealth, sunk);
+        emit ShotResolved(gameId, defenderIdx, shotX, shotY, cellType, hit, armored, stealth, sunk, cellDestroyed);
 
         if (sunk || _allShipsSunk(g)) {
             _finishGame(gameId, shooterIdx, false);
