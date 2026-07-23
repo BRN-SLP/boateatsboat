@@ -434,10 +434,10 @@ function ActiveBattle({
   }, [chain, mustRespond, placement, pending, gameId, setMyShots]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-full flex-col gap-2">
       {/* Status bar — fixed min-height so showing/hiding the action button
           never reflows the boards below (no screen jump). */}
-      <div className="flex min-h-[2.75rem] items-center justify-center gap-3">
+      <div className="flex min-h-[2.5rem] shrink-0 items-center justify-center gap-3">
         <StatusLine
           myTurn={myTurn}
           mustRespond={mustRespond}
@@ -456,8 +456,8 @@ function ActiveBattle({
         )}
       </div>
 
-      {/* Sunk enemy ships indicator — always reserves one line of height. */}
-      <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-2">
+      {/* Sunk enemy ships indicator — fixed line height to avoid reflow. */}
+      <div className="flex min-h-[1.5rem] shrink-0 flex-wrap items-center justify-center gap-2 overflow-hidden">
         {sunkEnemyShips.map((name, i) => (
           <span
             key={i}
@@ -468,9 +468,10 @@ function ActiveBattle({
         ))}
       </div>
 
-      {/* Two boards side by side */}
-      <div className="flex flex-wrap items-start justify-center gap-4">
-        <div className="min-w-0 flex-1" style={{ maxWidth: "50%" }}>
+      {/* Two boards side by side — flex-1 fills remaining height, min-h-0
+          lets the boards shrink so everything fits one screen without scroll. */}
+      <div className="flex min-h-0 flex-1 items-center justify-center gap-3">
+        <div className="flex h-full min-w-0 flex-1 flex-col" style={{ maxWidth: "50%" }}>
           <BoardColumn
             title="Their fleet"
             subtitle={`${enemyCellsRemaining} cells afloat`}
@@ -481,7 +482,7 @@ function ActiveBattle({
             fleet="green"
           />
         </div>
-        <div className="min-w-0 flex-1" style={{ maxWidth: "50%" }}>
+        <div className="flex h-full min-w-0 flex-1 flex-col" style={{ maxWidth: "50%" }}>
           <BoardColumn
             title="Your fleet"
             subtitle={`${cellsRemaining} cells afloat`}
@@ -493,8 +494,11 @@ function ActiveBattle({
         </div>
       </div>
 
-      {/* Fleet legend — ship cards with special behavior explained */}
-      <FleetLegend />
+      {/* Fleet legend — toggleable, collapsed by default, shrink-0 so it
+          never pushes the boards into a scroll. */}
+      <div className="shrink-0">
+        <FleetLegend />
+      </div>
     </div>
   );
 }
@@ -572,12 +576,12 @@ function BoardColumn({
   fleet?: "blue" | "green";
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-baseline justify-between">
+    <div className="flex min-h-0 flex-1 flex-col gap-1">
+      <div className="flex shrink-0 items-baseline justify-between">
         <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
         <span className="text-[10px] text-slate-400">{subtitle}</span>
       </div>
-      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} />
+      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} fill />
     </div>
   );
 }

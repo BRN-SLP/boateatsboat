@@ -42,9 +42,11 @@ export default function GamePage() {
             </div>
           </div>
 
-          {/* Game content — fills remaining space */}
-          <div className="mt-2 flex-1 overflow-y-auto">
-            <GameView gameId={gameId} theme={theme} />
+          {/* Game content — fills remaining space, no scroll */}
+          <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1">
+              <GameView gameId={gameId} theme={theme} />
+            </div>
           </div>
         </div>
       </div>
