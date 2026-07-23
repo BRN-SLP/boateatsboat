@@ -434,15 +434,16 @@ function ActiveBattle({
   }, [chain, mustRespond, placement, pending, gameId, setMyShots]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Status bar */}
-      <div className="flex flex-wrap items-center justify-center gap-3">
+    <div className="flex flex-col gap-3">
+      {/* Status bar — fixed min-height so showing/hiding the action button
+          never reflows the boards below (no screen jump). */}
+      <div className="flex min-h-[2.75rem] items-center justify-center gap-3">
         <StatusLine
           myTurn={myTurn}
           mustRespond={mustRespond}
           cellsRemaining={cellsRemaining}
         />
-        {mustRespond && (
+        {mustRespond ? (
           <button
             disabled={isPending}
             onClick={onRespond}
@@ -450,22 +451,22 @@ function ActiveBattle({
           >
             {isPending ? "Answering..." : "Answer shot (proof)"}
           </button>
+        ) : (
+          <span className="invisible px-4 py-2 font-marker text-sm uppercase">&nbsp;</span>
         )}
       </div>
 
-      {/* Sunk enemy ships indicator */}
-      {sunkEnemyShips.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {sunkEnemyShips.map((name, i) => (
-            <span
-              key={i}
-              className="doodle-border doodle-shadow rounded-lg bg-[#1a1a1a] px-3 py-1 font-marker text-xs uppercase text-white"
-            >
-              🎯 {name} sunk!
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Sunk enemy ships indicator — always reserves one line of height. */}
+      <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-2">
+        {sunkEnemyShips.map((name, i) => (
+          <span
+            key={i}
+            className="doodle-border doodle-shadow rounded-lg bg-[#1a1a1a] px-3 py-1 font-marker text-xs uppercase text-white"
+          >
+            🎯 {name} sunk!
+          </span>
+        ))}
+      </div>
 
       {/* Two boards side by side */}
       <div className="flex flex-wrap items-start justify-center gap-4">
@@ -490,6 +491,38 @@ function ActiveBattle({
             fleet="blue"
           />
         </div>
+      </div>
+
+      {/* Fleet legend — ship cards with special behavior explained */}
+      <FleetLegend />
+    </div>
+  );
+}
+
+// Compact fleet reference showing each ship, its size, HP and special rule.
+function FleetLegend() {
+  const ships = [
+    { emoji: "🛳️", name: "Carrier", size: 5, hp: 1, rule: "Standard — sinks in one hit per cell" },
+    { emoji: "🚢", name: "Battleship", size: 4, hp: 2, rule: "🛡️ Armor — first hit wounds (steals the turn), second hit destroys" },
+    { emoji: "⛴️", name: "Cruiser", size: 3, hp: 1, rule: "Standard — sinks in one hit per cell" },
+    { emoji: "🤿", name: "Submarine", size: 3, hp: 1, rule: "🌊 Stealth — hidden until hit, revealed on first shot" },
+  ];
+  return (
+    <div className="doodle-border doodle-shadow rounded-xl bg-[#F9F7F2] p-3">
+      <div className="mb-2 text-center font-marker text-xs uppercase tracking-wider text-[#1a1a1a]/60">
+        Fleet intel · hit legend
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {ships.map((s) => (
+          <div key={s.name} className="flex flex-col gap-0.5 rounded-lg border border-[#1a1a1a]/10 bg-white px-2 py-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-base leading-none">{s.emoji}</span>
+              <span className="font-marker text-xs uppercase text-[#1a1a1a]">{s.name}</span>
+            </div>
+            <div className="font-mono text-[10px] text-[#1a1a1a]/50">{s.size} cells · {s.hp} HP</div>
+            <div className="text-[10px] leading-tight text-[#1a1a1a]/70">{s.rule}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
