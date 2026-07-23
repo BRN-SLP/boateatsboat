@@ -51,9 +51,11 @@ describe("BattleshipGame", function () {
     return contract;
   }
 
-  // Helper: Alice hits a ship cell on Bob's board, then Bob misses water on Alice's
-  // board, returning the turn to Alice. One call = one full turn pair.
-  // If Alice's hit finishes the game, the helper returns without the Bob miss step.
+  // Helper: Alice fires at a ship cell on Bob's board.
+  // Turn rule: if the cell is DESTROYED by this shot, Alice keeps the turn
+  // (no Bob response needed). If only wounded (armor first hit), Bob gets the
+  // turn and misses on Alice's water to hand it back. If Alice's shot ends the
+  // game, the helper returns immediately.
   async function aliceHitBobMiss(
     g: any,
     gameId: bigint,
@@ -70,10 +72,16 @@ describe("BattleshipGame", function () {
     await g.write.respondShot([gameId, BigInt(bobBoard[cellIdx].type), proof], {
       account: bob.account,
     });
-    // If the hit ended the game, skip Bob's miss step.
+    // If the hit ended the game, nothing more to do.
     const state = (await g.read.getGame([gameId])).state;
     if (Number(state) === 3) return; // Finished
-    // Bob fires at water (9,9) on Alice's board and misses.
+    // If the cell was destroyed, the turn stays with Alice — no Bob miss needed.
+    // (cellsRemaining dropped). Otherwise (armor wounded) the turn went to Bob,
+    // so Bob misses on Alice's water to return the turn to Alice.
+    const game = (await g.read.getGame([gameId])) as any;
+    const turn = Number(game.turn);
+    if (turn === 0) return; // Alice still has the turn (cell destroyed)
+    // turn === 1: Bob's turn — he misses on water.
     await g.write.fire([gameId, 9, 9], { account: bob.account });
     const missProof = getProof(aliceTree, 99);
     await g.write.respondShot([gameId, 0, missProof], { account: alice.account });
@@ -137,7 +145,7 @@ describe("BattleshipGame", function () {
     ).to.be.rejected;
   });
 
-  it("resolves a hit with a valid Merkle proof and flips turn", async () => {
+  it("resolves a hit that DESTROYS a cell and keeps the turn with the shooter", async () => {
     const g = await deploy();
     await g.write.createDuel([0n], { account: alice.account });
     await g.write.joinDuel([1n], { account: bob.account });
@@ -148,18 +156,18 @@ describe("BattleshipGame", function () {
     await g.write.commitBoard([1n, aliceTree.root, FLEET_CELLS], { account: alice.account });
     await g.write.commitBoard([1n, bobTree.root, FLEET_CELLS], { account: bob.account });
 
-    // Alice fires at (0,0) which is a Carrier cell on Bob's board.
+    // Alice fires at (0,0) which is a Carrier cell (hp=1) on Bob's board.
     await g.write.fire([1n, 0, 0], { account: alice.account });
     const pending = await g.read.getPendingShot([1n]);
     expect(pending.active).to.equal(true);
 
-    // Bob answers with proof for cell (0,0) type=1 (hit).
+    // Bob answers with proof for cell (0,0) type=1 (hit, cell destroyed).
     const proof = getProof(bobTree, 0);
     await g.write.respondShot([1n, 1, proof], { account: bob.account });
 
     const game = await g.read.getGame([1n]);
-    // Turn flipped to defender (Bob, idx 1).
-    expect(Number(game.turn)).to.equal(1);
+    // Classic rule: destroying a cell keeps the turn with the shooter (Alice, idx 0).
+    expect(Number(game.turn)).to.equal(0);
     // Bob lost one cell.
     expect(Number(game.players[1].cellsRemaining)).to.equal(FLEET_CELLS - 1);
     expect(Number(game.players[0].shotsHit)).to.equal(1);
@@ -325,6 +333,9 @@ describe("BattleshipGame", function () {
     let game = await g.read.getGame([1n]);
     expect(Number(game.players[1].cellsRemaining)).to.equal(FLEET_CELLS);
     expect(Number(game.state)).to.equal(2); // still Active
+    // Turn rule: a hit that only WOUNDS (does not destroy) passes the turn to
+    // the defender (Bob, idx 1).
+    expect(Number(game.turn)).to.equal(1);
     // Armor memory records one hit on cell 10 (defender idx 1).
     const hits = await g.read.cellHits([1n, 1n, 10n]);
     expect(Number(hits)).to.equal(1);
@@ -341,6 +352,8 @@ describe("BattleshipGame", function () {
 
     game = await g.read.getGame([1n]);
     expect(Number(game.players[1].cellsRemaining)).to.equal(FLEET_CELLS - 1);
+    // Destroying the armored cell on the second hit keeps the turn with Alice.
+    expect(Number(game.turn)).to.equal(0);
   });
 
   it("stealth: Submarine cell (type=41) sinks on a single hit like a normal ship", async () => {
@@ -462,41 +475,40 @@ describe("BattleshipGame", function () {
     const armor = [10, 11, 12, 13];
 
     async function playWin(winner: any, loser: any, gameId: bigint) {
-      // Wound armor first.
-      for (const cellIdx of armor) {
+      async function shot(cellIdx: number, ct: number) {
         await g.write.fire([gameId, BigInt(cellIdx % 10), BigInt(Math.floor(cellIdx / 10))], {
           account: winner.account,
         });
-        await g.write.respondShot([gameId, 21, getProof(tree, cellIdx)], { account: loser.account });
-        // Loser misses back so winner keeps the turn.
+        await g.write.respondShot([gameId, BigInt(ct), getProof(tree, cellIdx)], { account: loser.account });
         const state = (await g.read.getGame([gameId])).state;
-        if (Number(state) === 3) return;
-        await g.write.fire([gameId, 9, 9], { account: loser.account });
-        await g.write.respondShot([gameId, 0, getProof(tree, 99)], { account: winner.account });
+        if (Number(state) === 3) return true; // game over
+        // If the turn stayed with winner (cell destroyed), no loser miss needed.
+        const game = (await g.read.getGame([gameId])) as any;
+        if (Number(game.turn) !== (winner === alice || winner === carol ? 0 : 1)) {
+          // Turn went to loser — loser misses on water to hand back the turn.
+          await g.write.fire([gameId, 9, 9], { account: loser.account });
+          await g.write.respondShot([gameId, 0, getProof(tree, 99)], { account: winner.account });
+        }
+        return false;
       }
+      // winner is always player 0 in semifinals (slot order), player 0 in final.
+      const winnerIdx = 0;
+      const loserIdx = 1;
+      void loserIdx;
+      // Wound armor first (first hit does not destroy — turn passes to loser).
+      for (const cellIdx of armor) {
+        if (await shot(cellIdx, 21)) return;
+      }
+      // Sink all hp=1 cells (one hit destroys — winner keeps the turn).
       for (const cellIdx of shipCells) {
-        await g.write.fire([gameId, BigInt(cellIdx % 10), BigInt(Math.floor(cellIdx / 10))], {
-          account: winner.account,
-        });
         const ct = cellIdx >= 30 && cellIdx <= 32 ? 41 : 1;
-        await g.write.respondShot([gameId, BigInt(ct), getProof(tree, cellIdx)], {
-          account: loser.account,
-        });
-        const state = (await g.read.getGame([gameId])).state;
-        if (Number(state) === 3) return;
-        await g.write.fire([gameId, 9, 9], { account: loser.account });
-        await g.write.respondShot([gameId, 0, getProof(tree, 99)], { account: winner.account });
+        if (await shot(cellIdx, ct)) return;
       }
+      // Finish off wounded armor (second hit destroys).
       for (const cellIdx of armor) {
-        await g.write.fire([gameId, BigInt(cellIdx % 10), BigInt(Math.floor(cellIdx / 10))], {
-          account: winner.account,
-        });
-        await g.write.respondShot([gameId, 21, getProof(tree, cellIdx)], { account: loser.account });
-        const state = (await g.read.getGame([gameId])).state;
-        if (Number(state) === 3) return;
-        await g.write.fire([gameId, 9, 9], { account: loser.account });
-        await g.write.respondShot([gameId, 0, getProof(tree, 99)], { account: winner.account });
+        if (await shot(cellIdx, 21)) return;
       }
+      void winnerIdx;
     }
 
     // SF1: alice beats bob; SF2: carol beats dave.

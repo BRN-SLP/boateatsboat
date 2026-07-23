@@ -327,6 +327,9 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         bool armored = (cellType >= TYPE_SHIP_HP2 && cellType < TYPE_SUB_STEALTH);
         bool stealth = _isStealth(cellType);
         bool sunk = false;
+        // Whether THIS shot destroyed the targeted cell. Drives the
+        // "hit again" turn rule: a shooter who destroys a cell keeps the turn.
+        bool cellDestroyed = false;
 
         if (hit) {
             uint16 cellIndex = uint16(uint16(ps.y) * BOARD_SIZE + ps.x);
@@ -335,6 +338,7 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             if (already + 1 >= hp) {
                 // Cell destroyed. Only now does it leave the defender's remaining count.
                 g.players[defenderIdx].cellsRemaining -= 1;
+                cellDestroyed = true;
                 sunk = (g.players[defenderIdx].cellsRemaining == 0);
             } else {
                 // Armored cell wounded but not yet destroyed; remember the hit.
@@ -360,8 +364,15 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             return;
         }
 
-        // Turn flips to the defender after answering.
-        g.turn = defenderIdx;
+        // Turn rule (classic Battleship): a shooter who DESTROYS a cell keeps
+        // the turn and fires again. A miss, or a hit that only wounds an armored
+        // cell (not yet destroyed), passes the turn to the defender.
+        // cellDestroyed is true only when this shot reduced cellsRemaining.
+        if (cellDestroyed) {
+            g.turn = shooterIdx;
+        } else {
+            g.turn = defenderIdx;
+        }
     }
 
     /// @notice If the defender failed to answer a shot in time, the shooter may claim a forfeit win.
