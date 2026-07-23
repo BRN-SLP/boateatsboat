@@ -371,7 +371,10 @@ function ActiveBattle({
   // Detect sunk enemy ships from revealed hits. Group adjacent destroyed cells
   // of the same type into a ship run; a ship is sunk when every cell in the run
   // is destroyed. carrier=5/type1, cruiser=3/type1, battleship=4/type21, sub=3/type41.
-  const sunkEnemyShips = useMemo<string[]>(() => {
+  const { sunkNames, sunkRuns } = useMemo<{
+    sunkNames: string[];
+    sunkRuns: { type: number; cells: number; startX: number; startY: number; vertical: boolean }[];
+  }>(() => {
     const destroyed = new Set<number>();
     const types = new Map<number, number>();
     for (const [idx, info] of enemyShots) {
@@ -380,7 +383,8 @@ function ActiveBattle({
         if (info.cellType != null) types.set(idx, info.cellType);
       }
     }
-    const result: string[] = [];
+    const names: string[] = [];
+    const runs: { type: number; cells: number; startX: number; startY: number; vertical: boolean }[] = [];
     const visited = new Set<number>();
     for (const start of destroyed) {
       if (visited.has(start)) continue;
@@ -402,14 +406,20 @@ function ActiveBattle({
       expand(start, 0, 1); expand(start, 0, -1);
       // Classify by (type, length).
       const len = run.length;
+      const minX = Math.min(...run.map((i) => i % BOARD_SIZE));
+      const minY = Math.min(...run.map((i) => Math.floor(i / BOARD_SIZE)));
+      const vertical = run.some((i) => Math.floor(i / BOARD_SIZE) !== minY);
       let name: string | null = null;
       if (t === 41 && len >= 3) name = "Submarine";
       else if (t === 21 && len >= 4) name = "Battleship";
       else if (t === 1 && len >= 5) name = "Carrier";
       else if (t === 1 && len >= 3) name = "Cruiser";
-      if (name) result.push(name);
+      if (name) {
+        names.push(name);
+        runs.push({ type: t, cells: len, startX: minX, startY: minY, vertical });
+      }
     }
-    return result;
+    return { sunkNames: names, sunkRuns: runs };
   }, [enemyShots]);
 
   const onFire = useCallback(
@@ -486,7 +496,7 @@ function ActiveBattle({
 
       {/* Sunk enemy ships indicator — fixed line height to avoid reflow. */}
       <div className="flex min-h-[1.5rem] shrink-0 flex-wrap items-center justify-center gap-2 overflow-hidden">
-        {sunkEnemyShips.map((name, i) => (
+        {sunkNames.map((name, i) => (
           <span
             key={i}
             className="doodle-border doodle-shadow rounded-lg bg-[#1a1a1a] px-3 py-1 font-marker text-xs uppercase text-white"
@@ -508,6 +518,7 @@ function ActiveBattle({
           onCellClick={onFire}
           fleet="green"
           cellSize={cellSize}
+          sunkShips={sunkRuns}
         />
         <BoardColumn
           title="Your fleet"
@@ -589,6 +600,7 @@ function BoardColumn({
   clickable,
   onCellClick,
   shipTypes,
+  sunkShips,
   fleet = "blue",
   cellSize = 28,
 }: {
@@ -599,6 +611,7 @@ function BoardColumn({
   clickable?: boolean;
   onCellClick?: (x: number, y: number) => void;
   shipTypes?: number[];
+  sunkShips?: { type: number; cells: number; startX: number; startY: number; vertical: boolean }[];
   fleet?: "blue" | "green";
   cellSize?: number;
 }) {
@@ -608,7 +621,7 @@ function BoardColumn({
         <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
         <span className="text-[10px] text-slate-400">{subtitle}</span>
       </div>
-      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} cellSize={cellSize} />
+      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} sunkShips={sunkShips} fleet={fleet} cellSize={cellSize} />
     </div>
   );
 }

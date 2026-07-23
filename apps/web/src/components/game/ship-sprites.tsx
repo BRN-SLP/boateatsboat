@@ -45,7 +45,7 @@ export function ShipSprite({
   const numCells = cells ?? config.cells;
   const w = numCells * cellSize;
   const h = cellSize;
-  const opacity = state === "sunk" ? 0.4 : state === "hit" ? 0.7 : 1;
+  const opacity = state === "sunk" ? 0.2 : state === "hit" ? 0.7 : 1;
 
   return (
     <div style={{ width: w, height: h, opacity, position: "relative", display: "flex", alignItems: "flex-end" }}>
@@ -56,22 +56,6 @@ export function ShipSprite({
         height={h}
         style={{ objectFit: "contain", objectPosition: "bottom" }}
       />
-      {state === "sunk" && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: h * 0.6,
-            color: "#000",
-            fontWeight: "bold",
-          }}
-        >
-          ✕
-        </div>
-      )}
     </div>
   );
 }

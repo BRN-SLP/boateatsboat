@@ -82,13 +82,16 @@ export function ShipOverlay({
   cellSize,
   gap = 2,
   fleet = "blue",
+  sunk = false,
 }: {
   ships: ShipRun[];
   cellSize: number;
   gap?: number;
   fleet?: FleetColor;
+  sunk?: boolean;
 }) {
   const step = cellSize + gap;
+  const state = sunk ? "sunk" : "intact";
 
   return (
     <div className="pointer-events-none absolute inset-0">
@@ -111,6 +114,7 @@ export function ShipOverlay({
                   fleet={fleet}
                   cellSize={cellSize}
                   cells={ship.cells}
+                  state={state}
                 />
               </div>
             ) : (
@@ -119,6 +123,7 @@ export function ShipOverlay({
                 fleet={fleet}
                 cellSize={cellSize}
                 cells={ship.cells}
+                state={state}
               />
             )}
           </div>

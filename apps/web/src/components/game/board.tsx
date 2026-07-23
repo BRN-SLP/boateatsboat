@@ -25,6 +25,7 @@ export function Board({
   previewCells,
   cellSize = 28,
   shipTypes,
+  sunkShips,
   fleet = "blue",
 }: {
   state: BoardState;
@@ -35,6 +36,7 @@ export function Board({
   previewCells?: Set<number>;
   cellSize?: number;
   shipTypes?: number[];
+  sunkShips?: ShipRun[];
   fleet?: FleetColor;
 }) {
   const colLetters = "ABCDEFGHIJ";
@@ -102,6 +104,10 @@ export function Board({
           {/* Ship silhouettes overlay */}
           {ships.length > 0 && (
             <ShipOverlay ships={ships} cellSize={cellSize} gap={gap} fleet={fleet} />
+          )}
+          {/* Sunk enemy ships overlay (faded, revealed once fully destroyed) */}
+          {sunkShips && sunkShips.length > 0 && (
+            <ShipOverlay ships={sunkShips} cellSize={cellSize} gap={gap} fleet={fleet} sunk />
           )}
         </div>
       </div>
