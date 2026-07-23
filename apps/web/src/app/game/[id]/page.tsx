@@ -30,7 +30,7 @@ export default function GamePage() {
         </nav>
 
         <h1 className="absolute left-1/2 -translate-x-1/2 font-creepster text-2xl tracking-widest text-[#1a1a1a] md:text-3xl">
-          DUEL <span className="font-mono">#{params.id}</span>
+          DUEL #{params.id}
         </h1>
 
         <div className="flex items-center gap-2">
