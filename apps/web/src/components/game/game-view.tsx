@@ -434,10 +434,10 @@ function ActiveBattle({
   }, [chain, mustRespond, placement, pending, gameId, setMyShots]);
 
   return (
-    <div className="flex h-full flex-col gap-2">
+    <div className="flex flex-col gap-2">
       {/* Status bar — fixed min-height so showing/hiding the action button
           never reflows the boards below (no screen jump). */}
-      <div className="flex min-h-[2.5rem] shrink-0 items-center justify-center gap-3">
+      <div className="flex min-h-[2.5rem] items-center justify-center gap-3">
         <StatusLine
           myTurn={myTurn}
           mustRespond={mustRespond}
@@ -457,7 +457,7 @@ function ActiveBattle({
       </div>
 
       {/* Sunk enemy ships indicator — fixed line height to avoid reflow. */}
-      <div className="flex min-h-[1.5rem] shrink-0 flex-wrap items-center justify-center gap-2 overflow-hidden">
+      <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-2 overflow-hidden">
         {sunkEnemyShips.map((name, i) => (
           <span
             key={i}
@@ -468,35 +468,29 @@ function ActiveBattle({
         ))}
       </div>
 
-      {/* Two boards side by side — flex-1 fills remaining height, min-h-0
-          lets the boards shrink so everything fits one screen without scroll. */}
-      <div className="flex min-h-0 flex-1 items-center justify-center gap-3">
-        <div className="flex h-full min-w-0 flex-1 flex-col" style={{ maxWidth: "50%" }}>
-          <BoardColumn
-            title="Their fleet"
-            subtitle={`${enemyCellsRemaining} cells afloat`}
-            board={enemyBoard}
-            theme={theme}
-            clickable={myTurn}
-            onCellClick={onFire}
-            fleet="green"
-          />
-        </div>
-        <div className="flex h-full min-w-0 flex-1 flex-col" style={{ maxWidth: "50%" }}>
-          <BoardColumn
-            title="Your fleet"
-            subtitle={`${cellsRemaining} cells afloat`}
-            board={ownBoard}
-            theme={theme}
-            shipTypes={placement?.types}
-            fleet="blue"
-          />
-        </div>
+      {/* Two boards side by side, compact so the whole battle fits one screen. */}
+      <div className="flex flex-wrap items-start justify-center gap-3">
+        <BoardColumn
+          title="Their fleet"
+          subtitle={`${enemyCellsRemaining} cells afloat`}
+          board={enemyBoard}
+          theme={theme}
+          clickable={myTurn}
+          onCellClick={onFire}
+          fleet="green"
+        />
+        <BoardColumn
+          title="Your fleet"
+          subtitle={`${cellsRemaining} cells afloat`}
+          board={ownBoard}
+          theme={theme}
+          shipTypes={placement?.types}
+          fleet="blue"
+        />
       </div>
 
-      {/* Fleet legend — toggleable, collapsed by default, shrink-0 so it
-          never pushes the boards into a scroll. */}
-      <div className="shrink-0">
+      {/* Fleet legend — toggleable, collapsed by default. */}
+      <div className="flex justify-center">
         <FleetLegend />
       </div>
     </div>
@@ -576,12 +570,12 @@ function BoardColumn({
   fleet?: "blue" | "green";
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1">
-      <div className="flex shrink-0 items-baseline justify-between">
+    <div className="flex flex-col gap-1">
+      <div className="flex items-baseline justify-between">
         <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
         <span className="text-[10px] text-slate-400">{subtitle}</span>
       </div>
-      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} fill />
+      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} compact />
     </div>
   );
 }

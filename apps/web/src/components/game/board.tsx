@@ -23,7 +23,6 @@ export function Board({
   compact,
   shipTypes,
   fleet = "blue",
-  fill = false,
 }: {
   state: BoardState;
   theme: "inferno" | "classic";
@@ -34,7 +33,6 @@ export function Board({
   compact?: boolean;
   shipTypes?: number[];
   fleet?: FleetColor;
-  fill?: boolean;
 }) {
   const colLetters = "ABCDEFGHIJ";
   const cellAreaRef = useRef<HTMLDivElement>(null);
@@ -58,24 +56,20 @@ export function Board({
   const ships: ShipRun[] = shipTypes ? extractShipRuns(shipTypes) : [];
 
   return (
-    <div className={cn(
-      "flex flex-col gap-1 mx-auto",
-      fill ? "h-full min-h-0 w-full max-w-none" : compact ? "w-full max-w-[260px]" : "w-full max-w-[440px]"
-    )}>
+    <div className={cn("flex flex-col gap-1 mx-auto", compact ? "w-full max-w-[260px]" : "w-full max-w-[440px]")}>
       {label && (
-        <div className="text-xs font-medium text-slate-500 text-center shrink-0">{label}</div>
+        <div className="text-xs font-medium text-slate-500 text-center">{label}</div>
       )}
       {/* Column letters */}
-      <div className="flex shrink-0 gap-[2px] pl-[18px]">
+      <div className="flex gap-[2px] pl-[18px]">
         {Array.from({ length: BOARD_SIZE }, (_, x) => (
           <span key={x} className="flex-1 text-center text-xs font-bold text-[#1a1a1a]">
             {colLetters[x]}
           </span>
         ))}
       </div>
-      {/* Body: row labels + cell area. In fill mode the body takes all
-          remaining height and the cell area stays square via aspect-ratio. */}
-      <div className={cn("flex gap-[2px]", fill && "min-h-0 flex-1")}>
+      {/* Body: row labels + cell area */}
+      <div className="flex gap-[2px]">
         {/* Row labels */}
         <div className="flex w-[18px] shrink-0 flex-col">
           {Array.from({ length: BOARD_SIZE }, (_, y) => (
@@ -88,12 +82,8 @@ export function Board({
           ))}
         </div>
         {/* Cell area — relative for ship overlay */}
-        <div
-          ref={cellAreaRef}
-          className={cn("relative flex-1", fill && "h-full")}
-          style={fill ? { aspectRatio: "1 / 1", maxWidth: "100%", maxHeight: "100%" } : undefined}
-        >
-          <div className={cn("grid grid-cols-10 gap-[2px]", fill && "h-full")}>
+        <div ref={cellAreaRef} className="relative flex-1">
+          <div className="grid grid-cols-10 gap-[2px]">
             {Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, idx) => {
               const x = idx % BOARD_SIZE;
               const y = Math.floor(idx / BOARD_SIZE);
