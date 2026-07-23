@@ -232,7 +232,7 @@ function ActiveBattle({
   setEnemyShots: React.Dispatch<React.SetStateAction<Map<number, ShotInfo>>>;
   myShots: Map<number, ShotInfo>;
   setMyShots: React.Dispatch<React.SetStateAction<Map<number, ShotInfo>>>;
-  pending: { active: boolean; shooterIdx: number; x: number; y: number } | null;
+  pending: { active: boolean; shooterIdx: number; x: number; y: number; deadline: bigint } | null;
   theme: Theme;
   cellsRemaining: number;
   enemyCellsRemaining: number;
@@ -475,6 +475,26 @@ function ActiveBattle({
     );
   }, [chain, mustRespond, placement, pending, gameId, setMyShots]);
 
+  // Claim a forfeit win: if the opponent fired at us and then stalled past the
+  // move timeout, we (the defender) can claim the win. The contract's
+  // claimForfeit is callable by the SHOOTER when the defender times out, but
+  // also by us when an incoming shot is unanswered — here we expose it for the
+  // case where it is OUR turn to respond and the deadline has passed.
+  const now = Date.now();
+  const canForfeit = Boolean(
+    pending?.active && pending.shooterIdx === meIdx && pending.deadline > 0n && Number(pending.deadline) * 1000 < now
+  );
+  const onClaimForfeit = useCallback(() => {
+    if (!chain || !canForfeit) return;
+    const proxy = gameProxyFor(chain.id);
+    writeContract({
+      address: proxy,
+      abi: gameAbi,
+      functionName: "claimForfeit",
+      args: [gameId],
+    });
+  }, [chain, canForfeit, gameId]);
+
   return (
     <div className="flex h-full flex-col gap-2">
       {/* Battle area: three columns — Their fleet | info | Your fleet.
@@ -508,6 +528,14 @@ function ActiveBattle({
               className="doodle-border doodle-shadow rounded-xl bg-[#d33a30] px-3 py-2 text-center font-marker text-xs uppercase text-white disabled:opacity-40"
             >
               {isPending ? "Answering..." : "Answer shot"}
+            </button>
+          ) : canForfeit ? (
+            <button
+              disabled={isPending}
+              onClick={onClaimForfeit}
+              className="doodle-border doodle-shadow rounded-xl bg-[#1a1a1a] px-3 py-2 text-center font-marker text-xs uppercase text-white disabled:opacity-40"
+            >
+              {isPending ? "Claiming..." : "Claim win 🏳️"}
             </button>
           ) : (
             <span className="px-3 py-2 font-marker text-xs uppercase opacity-0">&nbsp;</span>

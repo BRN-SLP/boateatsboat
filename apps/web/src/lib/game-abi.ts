@@ -99,6 +99,13 @@ export const gameAbi = [
     outputs: [],
   },
   {
+    name: "claimForfeit",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "gameId", type: "uint256" }],
+    outputs: [],
+  },
+  {
     name: "nextGameId",
     type: "function",
     stateMutability: "view",
