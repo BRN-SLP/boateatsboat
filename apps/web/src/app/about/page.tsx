@@ -48,14 +48,32 @@ export default function AboutPage() {
               <Step
                 icon={<Flame className="h-5 w-5" />}
                 title="Fire and prove"
-                body="Take turns firing. The defender answers each shot with a cryptographic proof of hit or miss. Lying is impossible."
+                body="Take turns firing. The defender answers each shot with a cryptographic proof of hit or miss. Lying is impossible. Destroy a cell and you keep firing; miss or just wound armor and the turn passes."
               />
               <Step
                 icon={<Shield className="h-5 w-5" />}
                 title="Win or drain"
-                body="Sink every enemy cell. Battleship armor absorbs one hit; submarines hide in silence. Last fleet afloat wins."
+                body="Sink every enemy cell. Battleship armor absorbs one hit (and steals the turn); submarines hide in silence until hit. Last fleet afloat wins."
               />
             </div>
+
+            {/* Game modes */}
+            <h2 className="mb-3 mt-6 font-marker text-xl uppercase text-[#1a1a1a]">Game Modes</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <ModeInfo
+                title="🤝 Friendly Duel"
+                tag="FREE"
+                body="No money on the line. A hunt/target AI agent joins your open duel within seconds and plays back automatically — perfect for practice and quick fun. Every shot is still a real on-chain Celo transaction with a real Merkle proof."
+              />
+              <ModeInfo
+                title="💰 Duel for Keeps"
+                tag="cUSD STAKES"
+                body="Both players stake cUSD into escrow. Pick a preset (0.5 / 1 / 5 cUSD) or enter a custom amount. Winner takes both stakes (×2). If an opponent stalls past the 24h move limit, claim a forfeit win with one click and collect the pot."
+              />
+            </div>
+            <p className="mt-3 text-center font-marker text-xs uppercase tracking-wider text-[#1a1a1a]/50">
+              Tournaments (single-elim brackets, Top3 prize split) — coming soon
+            </p>
 
             {/* Fleet spec */}
             <h2 className="mb-3 mt-6 font-marker text-xl uppercase text-[#1a1a1a]">Your Fleet</h2>
@@ -133,6 +151,28 @@ function Step({
           {icon}
         </div>
         <h3 className="font-marker text-base uppercase text-[#1a1a1a]">{title}</h3>
+      </div>
+      <p className="text-xs leading-relaxed text-[#1a1a1a]/70">{body}</p>
+    </div>
+  );
+}
+
+function ModeInfo({
+  title,
+  tag,
+  body,
+}: {
+  title: string;
+  tag: string;
+  body: string;
+}) {
+  return (
+    <div className="doodle-border doodle-shadow flex flex-col gap-2 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-marker text-base uppercase text-[#1a1a1a]">{title}</h3>
+        <span className="rounded-full border-2 border-[#1a1a1a] bg-[#1a1a1a] px-2 py-0.5 font-marker text-[10px] uppercase text-white">
+          {tag}
+        </span>
       </div>
       <p className="text-xs leading-relaxed text-[#1a1a1a]/70">{body}</p>
     </div>

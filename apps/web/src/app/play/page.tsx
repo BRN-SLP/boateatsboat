@@ -92,22 +92,23 @@ export default function PlayPage() {
             <div className="grid w-full max-w-3xl gap-5 sm:grid-cols-2">
               {/* Friendly */}
               <ModeCard
-                title="Friendly duel"
-                emoji="🤝"
+                title="Play vs AI (free)"
+                emoji="🤖"
                 active={mode === "friendly"}
                 onClick={() => setMode("friendly")}
                 rotate="-rotate-2"
               >
                 <p className="text-xs leading-relaxed text-[#1a1a1a]/60">
-                  No stakes. The AI agent joins within seconds and plays
-                  hunt/target. Real on-chain shots, real Merkle proofs.
+                  No stakes. A hunt/target AI opponent joins your open duel
+                  within seconds and plays back automatically. Real on-chain
+                  shots, real Merkle proofs — perfect for practice.
                 </p>
                 <button
                   disabled={!address || busy || mode !== "friendly"}
                   onClick={onCreate}
                   className="play-btn doodle-shadow-large mt-auto rounded-2xl border-[3px] border-[#1a1a1a] bg-[#257ABB] px-6 py-3 font-marker text-xl uppercase tracking-wider text-white disabled:opacity-40"
                 >
-                  {createPending && mode === "friendly" ? "Deploying..." : "Play friendly"}
+                  {createPending && mode === "friendly" ? "Deploying..." : "Fight the AI"}
                 </button>
               </ModeCard>
 
