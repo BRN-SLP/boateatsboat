@@ -253,15 +253,19 @@ function ActiveBattle({
     const compute = () => {
       const r = el.getBoundingClientRect();
       if (r.width <= 0 || r.height <= 0) return;
-      // Three columns: board | info(176px) | board, plus two gaps (~3px each).
-      // Each board: 18px row-label column + 10 cells horizontally.
-      const infoColW = 176 + 6; // central info column width + gap allowance
+      // Three columns: board | info(176px) | board, plus gaps.
+      // Each board: 18px row-label column + 10 cells + gaps + borders.
+      // Be conservative: a generous safety margin (40px overhead per board,
+      // 10% global scale-down) guarantees the boards never overflow even with
+      // padding/border rounding differences across browsers.
+      const infoColW = 176 + 24; // central info column + both gaps allowance
       const perBoardW = (r.width - infoColW) / 2;
-      const byW = Math.floor((perBoardW - 18) / 10);
-      // Height available for one board column. Account for the title (~20px)
-      // and the column-letter row (~ one cell). So 11 cells worth + 20px.
-      const byH = Math.floor((r.height - 20) / 11);
-      const cs = Math.max(12, Math.min(byW, byH));
+      const byW = Math.floor((perBoardW - 40) / 10);
+      // Height: title (~20px) + column-letter row (~ one cell) + 10 cells,
+      // plus a 16px safety margin.
+      const byH = Math.floor((r.height - 36) / 11);
+      // 10% safety scale-down so border/padding rounding never pushes overflow.
+      const cs = Math.max(12, Math.floor(Math.min(byW, byH) * 0.9));
       setCellSize(cs);
     };
     compute();
