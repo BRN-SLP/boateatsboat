@@ -21,6 +21,7 @@ export function BoardCell({
   x,
   y,
   preview,
+  size,
 }: {
   visual: CellVisual;
   theme: "inferno" | "classic";
@@ -29,11 +30,15 @@ export function BoardCell({
   x: number;
   y: number;
   preview?: boolean; // hover preview during placement
+  size?: number; // explicit px size; falls back to aspect-square if omitted
 }) {
   const base =
-    "relative aspect-square rounded-[3px] border border-slate-300/40 transition-colors select-none";
+    "relative rounded-[3px] border border-slate-300/40 transition-colors select-none";
 
   const palette = CELL_PALETTES[theme][visual];
+  const sizeStyle: React.CSSProperties = size
+    ? { width: size, height: size }
+    : { aspectRatio: "1 / 1" };
 
   return (
     <motion.button
@@ -43,6 +48,7 @@ export function BoardCell({
       onClick={() => clickable && onCellClick?.(x, y)}
       whileHover={clickable ? { scale: 1.05 } : undefined}
       whileTap={clickable ? { scale: 0.95 } : undefined}
+      style={sizeStyle}
       className={cn(base, palette.bg, clickable && "cursor-pointer", preview && "ring-2 ring-rose-400")}
       animate={visual === "burning" ? { scale: [1, 1.04, 1] } : undefined}
       transition={visual === "burning" ? { repeat: Infinity, duration: 0.7, ease: "easeInOut" } : undefined}

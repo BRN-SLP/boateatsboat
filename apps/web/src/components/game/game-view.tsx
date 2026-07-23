@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAccount, useWriteContract, usePublicClient } from "wagmi";
 import { useGame } from "@/hooks/use-game";
@@ -242,6 +242,34 @@ function ActiveBattle({
   const { chain } = useAccount();
   const publicClient = usePublicClient();
 
+  // Measure the boards area and compute the largest square cell that fits both
+  // boards side-by-side AND within the available height. Deterministic: no
+  // aspect-ratio/flex fragility.
+  const boardsRef = useRef<HTMLDivElement>(null);
+  const [cellSize, setCellSize] = useState(28);
+  useEffect(() => {
+    const el = boardsRef.current;
+    if (!el) return;
+    const compute = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      // Two boards side by side with a gap. Each board: 18px row-label column
+      // + 10 cells horizontally. Vertically a board is the column-letter row
+      // (cellSize) + 10 cell rows + ~20px title line.
+      const perBoardW = (r.width - 20) / 2;
+      const byW = Math.floor((perBoardW - 18) / 10);
+      // Height available for one board column. Account for the title (~20px)
+      // and the column-letter row (~ one cell). So 11 cells worth + 20px.
+      const byH = Math.floor((r.height - 20) / 11);
+      const cs = Math.max(12, Math.min(byW, byH));
+      setCellSize(cs);
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const myTurn = turn === meIdx && !pending?.active;
   const mustRespond = Boolean(pending?.active && pending.shooterIdx !== meIdx);
 
@@ -434,10 +462,10 @@ function ActiveBattle({
   }, [chain, mustRespond, placement, pending, gameId, setMyShots]);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex h-full flex-col gap-2">
       {/* Status bar — fixed min-height so showing/hiding the action button
           never reflows the boards below (no screen jump). */}
-      <div className="flex min-h-[2.5rem] items-center justify-center gap-3">
+      <div className="flex min-h-[2.5rem] shrink-0 items-center justify-center gap-3">
         <StatusLine
           myTurn={myTurn}
           mustRespond={mustRespond}
@@ -457,7 +485,7 @@ function ActiveBattle({
       </div>
 
       {/* Sunk enemy ships indicator — fixed line height to avoid reflow. */}
-      <div className="flex min-h-[1.5rem] flex-wrap items-center justify-center gap-2 overflow-hidden">
+      <div className="flex min-h-[1.5rem] shrink-0 flex-wrap items-center justify-center gap-2 overflow-hidden">
         {sunkEnemyShips.map((name, i) => (
           <span
             key={i}
@@ -468,8 +496,9 @@ function ActiveBattle({
         ))}
       </div>
 
-      {/* Two boards side by side, compact so the whole battle fits one screen. */}
-      <div className="flex flex-wrap items-start justify-center gap-3">
+      {/* Two boards side by side. The container is measured and cellSize is
+          computed so both boards + labels fit without clipping or scroll. */}
+      <div ref={boardsRef} className="flex min-h-0 flex-1 items-center justify-center gap-5">
         <BoardColumn
           title="Their fleet"
           subtitle={`${enemyCellsRemaining} cells afloat`}
@@ -478,6 +507,7 @@ function ActiveBattle({
           clickable={myTurn}
           onCellClick={onFire}
           fleet="green"
+          cellSize={cellSize}
         />
         <BoardColumn
           title="Your fleet"
@@ -486,11 +516,12 @@ function ActiveBattle({
           theme={theme}
           shipTypes={placement?.types}
           fleet="blue"
+          cellSize={cellSize}
         />
       </div>
 
       {/* Fleet legend — toggleable, collapsed by default. */}
-      <div className="flex justify-center">
+      <div className="flex shrink-0 justify-center">
         <FleetLegend />
       </div>
     </div>
@@ -559,6 +590,7 @@ function BoardColumn({
   onCellClick,
   shipTypes,
   fleet = "blue",
+  cellSize = 28,
 }: {
   title: string;
   subtitle: string;
@@ -568,6 +600,7 @@ function BoardColumn({
   onCellClick?: (x: number, y: number) => void;
   shipTypes?: number[];
   fleet?: "blue" | "green";
+  cellSize?: number;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -575,7 +608,7 @@ function BoardColumn({
         <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
         <span className="text-[10px] text-slate-400">{subtitle}</span>
       </div>
-      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} compact />
+      <Board state={board} theme={theme} clickable={clickable} onCellClick={onCellClick} shipTypes={shipTypes} fleet={fleet} cellSize={cellSize} />
     </div>
   );
 }

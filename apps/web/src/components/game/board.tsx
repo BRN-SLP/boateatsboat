@@ -1,10 +1,8 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
 import { BOARD_SIZE } from "@/lib/game-config";
 import { BoardCell, type CellVisual } from "./cell";
 import { ShipOverlay, extractShipRuns, type ShipRun, type FleetColor } from "./ship-overlay";
-import { cn } from "@/lib/utils";
 
 export interface BoardState {
   // 100-cell visual array, indexed y*BOARD_SIZE + x.
@@ -13,6 +11,11 @@ export interface BoardState {
 
 export type { CellVisual };
 
+/**
+ * Board rendered with an EXPLICIT pixel cell size. This is deterministic and
+ * avoids all aspect-ratio / flex-fit fragility: whoever owns the layout
+ * measures the available space and passes the cellSize that fits.
+ */
 export function Board({
   state,
   theme,
@@ -20,7 +23,7 @@ export function Board({
   clickable,
   onCellClick,
   previewCells,
-  compact,
+  cellSize = 28,
   shipTypes,
   fleet = "blue",
 }: {
@@ -30,40 +33,33 @@ export function Board({
   clickable?: boolean;
   onCellClick?: (x: number, y: number) => void;
   previewCells?: Set<number>;
-  compact?: boolean;
+  cellSize?: number;
   shipTypes?: number[];
   fleet?: FleetColor;
 }) {
   const colLetters = "ABCDEFGHIJ";
-  const cellAreaRef = useRef<HTMLDivElement>(null);
-  const [cellSize, setCellSize] = useState(compact ? 24 : 34);
   const gap = 2;
-
-  useEffect(() => {
-    if (!cellAreaRef.current) return;
-    const measure = () => {
-      const cell = cellAreaRef.current?.querySelector("[data-cell]");
-      if (cell) {
-        const w = cell.getBoundingClientRect().width;
-        if (w > 0) setCellSize(w);
-      }
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-
   const ships: ShipRun[] = shipTypes ? extractShipRuns(shipTypes) : [];
 
+  const labelStyle: React.CSSProperties = { width: cellSize, fontSize: Math.max(9, cellSize * 0.4) };
+  const gridStyle: React.CSSProperties = {
+    gridTemplateColumns: `repeat(${BOARD_SIZE}, ${cellSize}px)`,
+    gap,
+  };
+
   return (
-    <div className={cn("flex flex-col gap-1 mx-auto", compact ? "w-full max-w-[260px]" : "w-full max-w-[440px]")}>
+    <div className="mx-auto flex flex-col gap-1">
       {label && (
-        <div className="text-xs font-medium text-slate-500 text-center">{label}</div>
+        <div className="text-center font-marker text-xs text-slate-600">{label}</div>
       )}
       {/* Column letters */}
       <div className="flex gap-[2px] pl-[18px]">
         {Array.from({ length: BOARD_SIZE }, (_, x) => (
-          <span key={x} className="flex-1 text-center text-xs font-bold text-[#1a1a1a]">
+          <span
+            key={x}
+            className="flex items-center justify-center font-bold text-[#1a1a1a]"
+            style={labelStyle}
+          >
             {colLetters[x]}
           </span>
         ))}
@@ -71,19 +67,20 @@ export function Board({
       {/* Body: row labels + cell area */}
       <div className="flex gap-[2px]">
         {/* Row labels */}
-        <div className="flex w-[18px] shrink-0 flex-col">
+        <div className="flex w-[16px] flex-col gap-[2px]">
           {Array.from({ length: BOARD_SIZE }, (_, y) => (
             <span
               key={y}
-              className="flex flex-1 items-center justify-end pr-1 text-xs font-bold text-[#1a1a1a]"
+              className="flex items-center justify-end pr-1 font-bold text-[#1a1a1a]"
+              style={{ height: cellSize, fontSize: Math.max(9, cellSize * 0.4) }}
             >
               {y + 1}
             </span>
           ))}
         </div>
         {/* Cell area — relative for ship overlay */}
-        <div ref={cellAreaRef} className="relative flex-1">
-          <div className="grid grid-cols-10 gap-[2px]">
+        <div className="relative">
+          <div className="grid" style={gridStyle}>
             {Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, idx) => {
               const x = idx % BOARD_SIZE;
               const y = Math.floor(idx / BOARD_SIZE);
@@ -97,6 +94,7 @@ export function Board({
                   clickable={clickable}
                   onCellClick={onCellClick}
                   preview={previewCells?.has(idx)}
+                  size={cellSize}
                 />
               );
             })}
