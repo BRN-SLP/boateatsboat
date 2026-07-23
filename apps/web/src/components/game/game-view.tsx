@@ -500,7 +500,9 @@ function ActiveBattle({
 }
 
 // Compact fleet reference showing each ship, its size, HP and special rule.
+// Collapsible: a small info button toggles the card grid.
 function FleetLegend() {
+  const [open, setOpen] = useState(false);
   const ships = [
     { emoji: "🛳️", name: "Carrier", size: 5, hp: 1, rule: "Standard — sinks in one hit per cell" },
     { emoji: "🚢", name: "Battleship", size: 4, hp: 2, rule: "🛡️ Armor — first hit wounds (steals the turn), second hit destroys" },
@@ -508,22 +510,44 @@ function FleetLegend() {
     { emoji: "🤿", name: "Submarine", size: 3, hp: 1, rule: "🌊 Stealth — hidden until hit, revealed on first shot" },
   ];
   return (
-    <div className="doodle-border doodle-shadow rounded-xl bg-[#F9F7F2] p-3">
-      <div className="mb-2 text-center font-marker text-xs uppercase tracking-wider text-[#1a1a1a]/60">
-        Fleet intel · hit legend
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {ships.map((s) => (
-          <div key={s.name} className="flex flex-col gap-0.5 rounded-lg border border-[#1a1a1a]/10 bg-white px-2 py-1.5">
-            <div className="flex items-center gap-1">
-              <span className="text-base leading-none">{s.emoji}</span>
-              <span className="font-marker text-xs uppercase text-[#1a1a1a]">{s.name}</span>
+    <div className="flex flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="doodle-border doodle-shadow flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-marker text-xs uppercase tracking-wider text-[#1a1a1a] hover:scale-105"
+        aria-expanded={open}
+      >
+        <span className="text-sm">ℹ️</span>
+        Fleet intel
+        <span className="text-[10px] text-[#1a1a1a]/40">{open ? "▲" : "▼"}</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="legend"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-full overflow-hidden"
+          >
+            <div className="doodle-border doodle-shadow rounded-xl bg-[#F9F7F2] p-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {ships.map((s) => (
+                  <div key={s.name} className="flex flex-col gap-0.5 rounded-lg border border-[#1a1a1a]/10 bg-white px-2 py-1.5">
+                    <div className="flex items-center gap-1">
+                      <span className="text-base leading-none">{s.emoji}</span>
+                      <span className="font-marker text-xs uppercase text-[#1a1a1a]">{s.name}</span>
+                    </div>
+                    <div className="font-mono text-[10px] text-[#1a1a1a]/50">{s.size} cells · {s.hp} HP</div>
+                    <div className="text-[10px] leading-tight text-[#1a1a1a]/70">{s.rule}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="font-mono text-[10px] text-[#1a1a1a]/50">{s.size} cells · {s.hp} HP</div>
-            <div className="text-[10px] leading-tight text-[#1a1a1a]/70">{s.rule}</div>
-          </div>
-        ))}
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
