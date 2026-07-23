@@ -43,7 +43,10 @@ export function ShipSprite({
 }: ShipSpriteProps) {
   const config = SHIP_IMAGES[type][fleet];
   const numCells = cells ?? config.cells;
-  const w = numCells * cellSize;
+  // Per-type width factor so each ship's art fills its run naturally. Carrier
+  // art is squat, so render it ~80% of its 5-cell width to match the others.
+  const widthFactor = type === "carrier" ? 0.8 : 1;
+  const w = numCells * cellSize * widthFactor;
   const h = cellSize;
   const isSunk = state === "sunk";
   const opacity = isSunk ? 0.55 : state === "hit" ? 0.7 : 1;
