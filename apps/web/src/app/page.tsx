@@ -46,11 +46,11 @@ export default function Home() {
             </nav>
 
             {/* Center: Header Title (original doodle logo) */}
-            <header className="relative z-0 flex flex-1 flex-col items-center justify-center">
+            <header className="pointer-events-none relative z-0 flex flex-1 items-center justify-center px-4">
               <img
                 src="/boateatsboat-logo.svg"
                 alt="BoatEatsBoat"
-                className="h-auto max-h-[40vh] w-auto max-w-[80%] object-contain drop-shadow-md"
+                className="h-auto max-h-[55vh] w-full max-w-[1400px] object-contain drop-shadow-md"
                 style={{ aspectRatio: "600 / 333" }}
               />
             </header>
