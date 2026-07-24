@@ -74,6 +74,23 @@ PAYMENT_TOKEN=0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80 \
    - `NEXT_PUBLIC_GAME_PROXY_MAINNET` (when mainnet deploys)
 4. Deploy.
 
+### Agent (Railway — always-on bot)
+
+The AI opponent is a long-running Node process that listens for `BotRequested`
+events, joins free duels, and plays. It must run 24/7 (it cannot live on
+Netlify/Vercel, which only serve request/response functions).
+
+1. Fund the bot wallet `0x21Fb8F9BA91864BB03F9a5ff6a8Fd648044119ae` with
+   ~0.5–1 CELO on **mainnet** for gas (no gas = no moves).
+2. On Railway: New Project → Deploy from GitHub → `BRN-SLP/boateatsboat`.
+3. Service Settings → Root Directory: `apps/agent`.
+4. Set variables (as secrets — never commit the real key):
+   - `AGENT_PRIVATE_KEY` = bot wallet key
+   - `GAME_CONTRACT` = `0xa05E6B19Dd828E955331C097e8Af4DBd0c42d3f9` (mainnet proxy)
+   - `CHAIN` = `celo`
+5. Deploy. Railway runs `pnpm build` (tsc) then `node dist/index.js`.
+   See `apps/agent/railway.toml`.
+
 ## Stack
 
 - Next.js 14 + wagmi 2 + viem 2 + rainbowkit 2
