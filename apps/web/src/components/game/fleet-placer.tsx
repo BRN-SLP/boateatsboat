@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BOARD_SIZE, FLEET_SPEC, TYPE_WATER } from "@/lib/game-config";
 import { buildMerkleTree, type MerkleTree } from "@/lib/merkle";
@@ -128,9 +128,32 @@ export function FleetPlacer({
   // Build a visual board where own ships are shown.
   const visualCells = types.map((t) => (t === TYPE_WATER ? "water" : "ship")) as any;
 
+  // Measure the board area so the board scales to fit on small screens.
+  // Without this, <Board> defaults to 28px cells and overflows on mobile.
+  const boardAreaRef = useRef<HTMLDivElement>(null);
+  const [cellSize, setCellSize] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const el = boardAreaRef.current;
+    if (!el) return;
+    const compute = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      // Board = ~18px row-label column + 10 cells + gaps + border.
+      // 24px overhead covers labels/border rounding; 5% safety margin.
+      const byW = Math.floor((r.width - 24) / 10);
+      const byH = Math.floor((r.height - 36) / 11);
+      const cs = Math.max(14, Math.floor(Math.min(byW, byH) * 0.95));
+      setCellSize(cs);
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-      <div className="flex flex-1 justify-center gap-3">
+      <div ref={boardAreaRef} className="flex min-h-[220px] flex-1 justify-center gap-3 md:min-h-0">
         <Board
           state={{ cells: visualCells }}
           theme="inferno"
@@ -140,6 +163,7 @@ export function FleetPlacer({
           previewCells={canPlace ? hoverCells : undefined}
           shipTypes={types}
           fleet="blue"
+          cellSize={cellSize}
         />
       </div>
 
