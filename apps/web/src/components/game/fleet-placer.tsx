@@ -184,7 +184,7 @@ export function FleetPlacer({
           </h3>
           <button
             onClick={() => setOrientation((o) => (o === "h" ? "v" : "h"))}
-            className="doodle-border rounded-lg bg-white px-3 py-1 font-marker text-xs uppercase text-[#1a1a1a] hover:scale-105"
+            className="doodle-border flex w-[72px] shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1 font-marker text-xs uppercase text-[#1a1a1a] hover:scale-105"
           >
             {orientation === "h" ? "↔ Horiz" : "↕ Vert"}
           </button>
