@@ -97,13 +97,33 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
   }
 
   if (game.state === 0) {
+    const isCreator = meIdx === 0;
+    const onWaitCancel = () => {
+      if (!chain) return;
+      writeContract({
+        address: gameProxyFor(chain.id),
+        abi: gameAbi,
+        functionName: "cancelDuel",
+        args: [gameId],
+      });
+    };
     return (
-      <div className="p-8 text-center">
+      <div className="flex flex-col items-center gap-4 p-8 text-center">
         <p className="text-slate-600">Waiting for an opponent to join...</p>
-        <p className="mt-2 text-xs text-slate-400">
-          Share gameId <code className="font-mono">{gameId.toString()}</code>. The AI agent
-          joins free duels automatically.
+        <p className="text-xs text-slate-400">
+          Share gameId <code className="font-mono">{gameId.toString()}</code>.{" "}
+          {game.wager > 0n
+            ? "Wagered duel — a real opponent must join."
+            : "Free duel — request the AI agent, or invite a friend."}
         </p>
+        {isCreator && (
+          <button
+            onClick={onWaitCancel}
+            className="doodle-border doodle-shadow rounded-xl bg-[#1a1a1a] px-4 py-2 font-marker text-xs uppercase text-white"
+          >
+            Cancel &amp; refund
+          </button>
+        )}
       </div>
     );
   }

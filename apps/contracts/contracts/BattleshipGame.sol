@@ -423,6 +423,22 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
         _finishGame(gameId, ps.shooterIdx, true);
     }
 
+    /// @notice The creator cancels an Open duel nobody joined and reclaims the
+    /// escrowed wager. Only player 0, only while still Open (no opponent yet).
+    function cancelDuel(uint256 gameId) external {
+        Game storage g = games[gameId];
+        if (g.state != GameState.Open) revert InvalidBoard();
+        if (msg.sender != g.players[0].account) revert NotParticipant();
+        uint256 refund = g.wager;
+        // Mark finished (no winner) before the transfer — CEI ordering.
+        // We keep the rest of the Game struct so reads still report Finished.
+        g.state = GameState.Finished;
+        if (refund > 0) {
+            paymentToken.safeTransfer(msg.sender, refund);
+        }
+        emit GameFinished(gameId, address(0), false);
+    }
+
     // ---------------------------------------------------------------------
     // Win / payout
     // ---------------------------------------------------------------------
@@ -673,6 +689,9 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             t.prizesClaimed = true;
             return;
         }
+        // Checks-effects-interactions: mark prizes claimed BEFORE any external
+        // transfer so a malicious winner contract cannot re-enter and double-claim.
+        t.prizesClaimed = true;
         address first = t.firstPlace;
         address second = t.secondPlace;
         address third = t.thirdPlace;
@@ -688,7 +707,6 @@ contract BattleshipGame is Initializable, UUPSUpgradeable, OwnableUpgradeable {
             paymentToken.safeTransfer(first, t.prizePool);
             emit TournamentPrizeClaimed(tid, first, t.prizePool);
         }
-        t.prizesClaimed = true;
     }
 
     // ---------------------------------------------------------------------

@@ -433,6 +433,41 @@ describe("BattleshipGame", function () {
     expect(await token.read.balanceOf([gameAddr])).to.equal(0n);
   });
 
+  it("cancelDuel: creator reclaims the wager when nobody joined", async () => {
+    const token = await deployToken();
+    const g = await deploy(token.address);
+    const WAGER = 1_000_000n;
+    await token.write.mint([alice.account.address, WAGER], { account: owner.account });
+    const gameAddr = (g as any)._address;
+    await token.write.approve([gameAddr, WAGER], { account: alice.account });
+
+    const gameId = await createGame(g, alice.account, WAGER);
+    // Nobody joined; contract holds the wager.
+    expect(await token.read.balanceOf([gameAddr])).to.equal(WAGER);
+
+    // Bob (not the creator) cannot cancel.
+    await expect(g.write.cancelDuel([gameId], { account: bob.account })).to.be.rejected;
+
+    // Alice cancels and reclaims.
+    await g.write.cancelDuel([gameId], { account: alice.account });
+    expect(await token.read.balanceOf([alice.account.address])).to.equal(WAGER);
+    expect(await token.read.balanceOf([gameAddr])).to.equal(0n);
+
+    // The game is gone (state Finished + zeroed).
+    const after = (await g.read.getGame([gameId])) as any;
+    expect(Number(after.state)).to.equal(3); // Finished
+    // Cannot cancel twice or rejoin.
+    await expect(g.write.joinDuel([gameId], { account: bob.account })).to.be.rejected;
+  });
+
+  it("cancelDuel: free duels can be cancelled too (no transfer)", async () => {
+    const g = await deploy();
+    const gameId = await createGame(g, alice.account, 0n);
+    await g.write.cancelDuel([gameId], { account: alice.account });
+    const after = (await g.read.getGame([gameId])) as any;
+    expect(Number(after.state)).to.equal(3); // Finished
+  });
+
   it("tournament: 4-player single elimination, top3 payout, escrow + claim", async () => {
     const token = await deployToken();
     const g = await deploy(token.address);
