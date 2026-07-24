@@ -157,3 +157,43 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* --- Rotate-to-landscape prompt (mobile portrait only) --- */
+/* Hidden by default; shown only on small touch devices in portrait. */
+.rotate-overlay {
+  display: none;
+}
+@media (orientation: portrait) and (max-device-width: 900px) and (hover: none) {
+  .rotate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f2937;
+    color: #fff;
+    text-align: center;
+    padding: 2rem;
+  }
+  .rotate-overlay__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .rotate-overlay__icon {
+    font-size: 4rem;
+    animation: wobble 2s ease-in-out infinite;
+  }
+  .rotate-overlay__text {
+    font-family: var(--font-marker), cursive;
+    font-size: 1.75rem;
+    margin: 0;
+  }
+  .rotate-overlay__sub {
+    font-size: 1rem;
+    opacity: 0.8;
+    margin: 0;
+  }
+}

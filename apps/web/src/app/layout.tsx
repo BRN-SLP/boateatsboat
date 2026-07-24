@@ -1,6 +1,14 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Permanent_Marker, Creepster } from 'next/font/google';
 import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 import { WalletProvider } from "@/components/wallet-provider"
 
@@ -37,12 +45,20 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} ${permanentMarker.variable} ${creepster.variable}`}>
         {/* Navbar is included on all pages */}
-        <div className="relative flex h-screen flex-col overflow-hidden">
+        <div className="relative flex h-[100dvh] flex-col overflow-hidden">
           <WalletProvider>
             <main className="flex-1 overflow-hidden">
               {children}
             </main>
           </WalletProvider>
+        </div>
+        {/* Rotate-to-landscape prompt (mobile portrait only). See .rotate-overlay in globals.css */}
+        <div className="rotate-overlay" aria-hidden="true">
+          <div className="rotate-overlay__inner">
+            <div className="rotate-overlay__icon">🔄</div>
+            <p className="rotate-overlay__text">Rotate your device</p>
+            <p className="rotate-overlay__sub">BoatEatsBoat plays in landscape</p>
+          </div>
         </div>
       </body>
     </html>
