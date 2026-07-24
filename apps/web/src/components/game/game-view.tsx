@@ -138,7 +138,7 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
       );
     }
     return (
-      <div className="p-4">
+      <div className="h-full p-4 md:p-6">
         <FleetPlacer
           onReady={(res) => {
             savePlacement(res);

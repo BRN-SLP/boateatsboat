@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BOARD_SIZE, FLEET_SPEC, TYPE_WATER } from "@/lib/game-config";
 import { buildMerkleTree, type MerkleTree } from "@/lib/merkle";
 import { Board, emptyBoard } from "./board";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export interface PlacementResult {
@@ -20,6 +19,15 @@ interface ShipState {
   type: number;
   cells: number[]; // occupied cells
 }
+
+// Ship display metadata (emoji, HP, rule) keyed by FLEET_SPEC id. Mirrors the
+// FleetLegend cards so placement + battle use the same ship visuals.
+const FLEET_SHIPS = [
+  { id: "carrier", emoji: "🛳️", hp: 1 },
+  { id: "battleship", emoji: "🚢", hp: 2 },
+  { id: "cruiser", emoji: "⛴️", hp: 1 },
+  { id: "submarine", emoji: "🤿", hp: 1 },
+] as const;
 
 export function FleetPlacer({
   onReady,
@@ -152,8 +160,9 @@ export function FleetPlacer({
   }, []);
 
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:gap-6">
-      <div ref={boardAreaRef} className="flex min-h-[220px] flex-1 justify-center gap-3 md:min-h-0">
+    <div className="flex h-full flex-col gap-4 md:flex-row md:gap-6">
+      {/* Board area — gets the larger share of horizontal space on desktop. */}
+      <div ref={boardAreaRef} className="flex min-h-[260px] flex-[2] justify-center gap-3 md:min-h-0">
         <Board
           state={{ cells: visualCells }}
           theme="inferno"
@@ -167,62 +176,80 @@ export function FleetPlacer({
         />
       </div>
 
-      <div className="flex flex-col gap-3 md:w-56">
+      {/* Fleet control panel — wider, doodle-styled, with ship cards. */}
+      <div className="doodle-border doodle-shadow flex flex-col gap-3 rounded-2xl bg-[#F9F7F2] p-4 md:w-72">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-slate-700">Place your fleet</h3>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setOrientation((o) => (o === "h" ? "v" : "h"))}
-            >
-              {orientation === "h" ? "Horizontal" : "Vertical"}
-            </Button>
-          </div>
+          <h3 className="font-marker text-lg uppercase tracking-wide text-[#1a1a1a]">
+            Place your fleet
+          </h3>
+          <button
+            onClick={() => setOrientation((o) => (o === "h" ? "v" : "h"))}
+            className="doodle-border rounded-lg bg-white px-3 py-1 font-marker text-xs uppercase text-[#1a1a1a] hover:scale-105"
+          >
+            {orientation === "h" ? "↔ Horiz" : "↕ Vert"}
+          </button>
         </div>
 
-        <ul className="flex flex-col gap-1.5 text-xs">
-          {FLEET_SPEC.map((spec) => {
-            const placed = ships.find((p) => p.id === spec.id);
+        {/* Ship cards: emoji + name + size/HP + status badge. */}
+        <div className="flex flex-col gap-2">
+          {FLEET_SHIPS.map((s) => {
+            const spec = FLEET_SPEC.find((f) => f.id === s.id)!;
+            const placed = ships.find((p) => p.id === s.id);
+            const isActive = currentSpec?.id === s.id && !placed;
             return (
-              <li
-                key={spec.id}
+              <div
+                key={s.id}
                 className={cn(
-                  "flex items-center justify-between rounded-md border px-2 py-1",
+                  "flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors",
                   placed
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                    : currentSpec?.id === spec.id
-                    ? "border-rose-300 bg-rose-50 text-rose-700"
-                    : "border-slate-200 text-slate-600"
+                    ? "border-emerald-400 bg-emerald-50"
+                    : isActive
+                    ? "border-rose-400 bg-rose-50"
+                    : "border-[#1a1a1a]/10 bg-white"
                 )}
               >
-                <span>{spec.label} ({spec.size})</span>
-                <span>{placed ? "ready" : "pending"}</span>
-              </li>
+                <span className="text-2xl leading-none">{s.emoji}</span>
+                <div className="flex flex-1 flex-col">
+                  <span className="font-marker text-sm uppercase text-[#1a1a1a]">{spec.label}</span>
+                  <span className="font-mono text-[10px] text-[#1a1a1a]/50">
+                    {spec.size} cells · {s.hp} HP
+                  </span>
+                </div>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 font-marker text-[10px] uppercase",
+                    placed
+                      ? "bg-emerald-500 text-white"
+                      : "bg-[#1a1a1a]/10 text-[#1a1a1a]/60"
+                  )}
+                >
+                  {placed ? "✓ ready" : "pending"}
+                </span>
+              </div>
             );
           })}
-        </ul>
+        </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-1 flex flex-wrap gap-2">
           <button
             onClick={doRandomize}
             disabled={!randomize}
-            className="doodle-border doodle-shadow rounded-xl bg-[#257ABB] px-4 py-2 font-marker text-sm uppercase tracking-wide text-white hover:scale-105 transition-transform disabled:opacity-30"
+            className="doodle-border doodle-shadow rounded-xl bg-[#257ABB] px-4 py-2 font-marker text-sm uppercase tracking-wide text-white transition-transform hover:scale-105 disabled:opacity-30"
           >
             ⚂ Random
           </button>
           <button
             onClick={reset}
-            className="doodle-border rounded-xl bg-white px-4 py-2 font-marker text-sm uppercase tracking-wide text-[#1a1a1a] hover:scale-105 transition-transform"
+            className="doodle-border rounded-xl bg-white px-4 py-2 font-marker text-sm uppercase tracking-wide text-[#1a1a1a] transition-transform hover:scale-105"
           >
             Reset
           </button>
           <button
             disabled={!allPlaced}
             onClick={ready}
-            className="doodle-border doodle-shadow ml-auto rounded-xl bg-[#d33a30] px-4 py-2 font-marker text-sm uppercase tracking-wide text-white hover:scale-105 transition-transform disabled:opacity-30"
+            className="doodle-border doodle-shadow ml-auto rounded-xl bg-[#d33a30] px-5 py-2 font-marker text-base uppercase tracking-wide text-white transition-transform hover:scale-105 disabled:opacity-30"
           >
-            Deploy Fleet ⚓
+            Deploy ⚓
           </button>
         </div>
 
@@ -232,9 +259,9 @@ export function FleetPlacer({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"
+              className="rounded-lg border-2 border-emerald-400 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"
             >
-              Fleet ready. Hit Ready to lock in your layout.
+              Fleet ready. Hit <strong>Deploy</strong> to lock in your layout.
             </motion.div>
           )}
         </AnimatePresence>
