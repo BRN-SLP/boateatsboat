@@ -20,13 +20,13 @@ interface ShipState {
   cells: number[]; // occupied cells
 }
 
-// Ship display metadata (emoji, HP, rule) keyed by FLEET_SPEC id. Mirrors the
-// FleetLegend cards so placement + battle use the same ship visuals.
+// Ship display metadata keyed by FLEET_SPEC id. Uses the real doodle sprites
+// from /public/ships/ (blue = the player's own fleet).
 const FLEET_SHIPS = [
-  { id: "carrier", emoji: "🛳️", hp: 1 },
-  { id: "battleship", emoji: "🚢", hp: 2 },
-  { id: "cruiser", emoji: "⛴️", hp: 1 },
-  { id: "submarine", emoji: "🤿", hp: 1 },
+  { id: "carrier", src: "/ships/carrier-blue.webp", hp: 1 },
+  { id: "battleship", src: "/ships/battleship-blue.webp", hp: 2 },
+  { id: "cruiser", src: "/ships/cruiser-blue.webp", hp: 1 },
+  { id: "submarine", src: "/ships/submarine-blue.webp", hp: 1 },
 ] as const;
 
 export function FleetPlacer({
@@ -208,7 +208,11 @@ export function FleetPlacer({
                     : "border-[#1a1a1a]/10 bg-white"
                 )}
               >
-                <span className="text-2xl leading-none">{s.emoji}</span>
+                <img
+                  src={s.src}
+                  alt={spec.label}
+                  className="h-9 w-auto shrink-0 object-contain drop-shadow-sm"
+                />
                 <div className="flex flex-1 flex-col">
                   <span className="font-marker text-sm uppercase text-[#1a1a1a]">{spec.label}</span>
                   <span className="font-mono text-[10px] text-[#1a1a1a]/50">
