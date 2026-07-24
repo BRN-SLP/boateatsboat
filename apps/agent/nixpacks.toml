@@ -7,18 +7,21 @@
 #   AGENT_PRIVATE_KEY, GAME_CONTRACT, CHAIN
 
 # Pin Node 20. Node 18's bundled corepack has stale signature keys that break
-# pnpm install with "Cannot find matching keyid", so we avoid corepack and
-# install pnpm directly via npm below.
+# pnpm install with "Cannot find matching keyid", so we install pnpm via npm.
 [phases.setup]
   nixPkgs = ["nodejs_20"]
 
 [phases.install]
+  # Install pnpm globally AND run the monorepo install in the SAME shell, so
+  # pnpm is on PATH for the install step. (Nixpacks runs each cmds[] entry as
+  # a separate RUN layer, so install + use must be &&-chained in one entry.)
   cmds = [
-    "npm install -g pnpm@8.10.0",
-    "pnpm install --frozen-lockfile --filter @boateatsboat/agent...",
+    "npm install -g pnpm@8.10.0 && pnpm install --frozen-lockfile --filter @boateatsboat/agent...",
   ]
 
 [phases.build]
+  # pnpm lives in npm's global bin (/usr/local/bin), which stays on PATH for
+  # later phases. Build the agent workspace (tsc -> dist/).
   cmds = ["pnpm --filter @boateatsboat/agent build"]
 
 [start]
