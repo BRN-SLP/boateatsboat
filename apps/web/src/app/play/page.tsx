@@ -81,10 +81,10 @@ export default function PlayPage() {
   const busy = createPending || joinPending;
 
   return (
-    <main className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-gray-900">
-      <div className="relative aspect-video h-full max-h-screen w-full overflow-hidden bg-[#A8D8EA] shadow-2xl">
+    <main className="relative flex h-[100dvh] w-screen items-center justify-center overflow-hidden bg-gray-900">
+      <div className="relative aspect-video h-full max-h-[100dvh] w-full overflow-hidden bg-[#A8D8EA] shadow-2xl">
         {/* UI Layer */}
-        <div className="absolute inset-0 flex h-full w-full flex-col p-6">
+        <div className="absolute inset-0 flex h-full w-full flex-col overflow-y-auto p-6">
           {/* Top: Nav + Title */}
           <div className="flex items-start justify-between">
             <nav className="flex w-28 flex-col gap-2 pl-2 pt-2">

@@ -14,7 +14,7 @@ export default function GamePage() {
   const [theme, setTheme] = useState<"inferno" | "classic">("inferno");
 
   return (
-    <main className="flex h-screen w-screen flex-col overflow-hidden bg-[#A8D8EA]">
+    <main className="flex h-[100dvh] w-screen flex-col overflow-hidden bg-[#A8D8EA]">
       {/* Top bar: compact nav + title */}
       <div className="flex shrink-0 items-center justify-between px-4 pt-3 pb-2">
         <nav className="flex gap-1.5">
