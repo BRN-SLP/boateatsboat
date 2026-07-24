@@ -200,7 +200,7 @@ export function FleetPlacer({
               <div
                 key={s.id}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors",
+                  "flex h-14 items-center gap-2 overflow-hidden rounded-lg border-2 px-3 py-2 transition-colors",
                   placed
                     ? "border-emerald-400 bg-emerald-50"
                     : isActive
@@ -211,17 +211,17 @@ export function FleetPlacer({
                 <img
                   src={s.src}
                   alt={spec.label}
-                  className="h-9 w-auto shrink-0 object-contain drop-shadow-sm"
+                  className="h-10 max-w-[80px] shrink-0 object-contain drop-shadow-sm"
                 />
-                <div className="flex flex-1 flex-col">
-                  <span className="font-marker text-sm uppercase text-[#1a1a1a]">{spec.label}</span>
-                  <span className="font-mono text-[10px] text-[#1a1a1a]/50">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-marker text-sm uppercase text-[#1a1a1a]">{spec.label}</span>
+                  <span className="truncate font-mono text-[10px] text-[#1a1a1a]/50">
                     {spec.size} cells · {s.hp} HP
                   </span>
                 </div>
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 font-marker text-[10px] uppercase",
+                    "shrink-0 rounded-full px-2 py-0.5 font-marker text-[10px] uppercase",
                     placed
                       ? "bg-emerald-500 text-white"
                       : "bg-[#1a1a1a]/10 text-[#1a1a1a]/60"
