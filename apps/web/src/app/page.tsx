@@ -51,7 +51,7 @@ export default function Home() {
                 src="/boateatsboat-logo.svg"
                 alt="BoatEatsBoat"
                 className="h-full w-full object-contain drop-shadow-md"
-                style={{ aspectRatio: "640 / 356" }}
+                style={{ aspectRatio: "600 / 333" }}
               />
             </header>
 
