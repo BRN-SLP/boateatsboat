@@ -1,13 +1,22 @@
 # Nixpacks build config for the BoatEatsBoat AI agent on Railway.
-# Read directly by Railway's Nixpacks builder. Explicitly defines install +
-# build + start to avoid the "dist/ not found" failure in a pnpm monorepo.
+# Explicitly defines setup + install + build + start to avoid auto-detection
+# pitfalls in a pnpm monorepo.
 #
 # Railway service Settings -> Root Directory must be: apps/agent
+# Variables (set as secrets in the Railway dashboard):
+#   AGENT_PRIVATE_KEY, GAME_CONTRACT, CHAIN
+
+# Pin Node 20. Node 18's bundled corepack has stale signature keys that break
+# pnpm install with "Cannot find matching keyid", so we avoid corepack and
+# install pnpm directly via npm below.
+[phases.setup]
+  nixPkgs = ["nodejs_20"]
 
 [phases.install]
-  # Install only the agent workspace + its deps (resolves viem from lockfile).
-  # corepack gives us the pnpm version pinned by the repo's packageManager.
-  cmds = ["corepack enable", "pnpm install --frozen-lockfile --filter @boateatsboat/agent..."]
+  cmds = [
+    "npm install -g pnpm@8.10.0",
+    "pnpm install --frozen-lockfile --filter @boateatsboat/agent...",
+  ]
 
 [phases.build]
   cmds = ["pnpm --filter @boateatsboat/agent build"]
