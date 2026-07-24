@@ -102,3 +102,6 @@ Thumbs.db
 .stitch/
 Working_Assets/
 .env*.local
+
+# Netlify CLI local state
+.netlify

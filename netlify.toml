@@ -1,0 +1,13 @@
+[build]
+  base = "."
+  command = "pnpm --filter web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NEXT_PUBLIC_WC_PROJECT_ID = "c438eb701cf80de6e1fe5d11b89a997a"
+  # Sepolia proxy is hardcoded in game-config.ts; override here for mainnet later:
+  # NEXT_PUBLIC_GAME_PROXY_SEPOLIA = "0x1c8780b202af9917ba8CaeD65202ffD2013d2205"
+  # NEXT_PUBLIC_GAME_PROXY_MAINNET = "0x..."
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
