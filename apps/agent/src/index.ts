@@ -37,7 +37,7 @@ async function main() {
 // GameCreated event rather than iterating 1..n.
 async function recentGameIds(): Promise<bigint[]> {
   const currentBlock = await publicClient.getBlockNumber();
-  const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n;
+  const fromBlock = currentBlock > 45000n ? currentBlock - 45000n : 0n;
   const logs = await publicClient.getLogs({
     address: gameAddress,
     event: {

@@ -26,7 +26,7 @@ apps/
 
 | Chain | Proxy | Impl |
 |---|---|---|
-| Celo Sepolia (11142220) | `0x1c8780b202af9917ba8CaeD65202ffD2013d2205` | `0xbA246CFdCF7F4904E829C6f81256eB995342D181` |
+| Celo Sepolia (11142220) | `0x1c8780b202af9917ba8CaeD65202ffD2013d2205` | `0xF37952f4aa7598CE2977917741995CC837998E66` |
 | Celo mainnet (42220) | _not deployed yet_ | _not deployed yet_ |
 
 Payment token: USDm on Sepolia (`0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`), cUSD on mainnet (`0x765DE816845861e75A25fCA122bb6898B8B1282a`).
@@ -82,12 +82,15 @@ PAYMENT_TOKEN=0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80 \
 - MiniPay auto-connect hook (scaffold-provided)
 - Celo skills: celopedia, celo-rpc, celo-stablecoins, minipay-integration, fee-abstraction
 
-## Status (2026-07-23)
+## Status (2026-07-24)
 
-- Contract: 14/14 tests, deployed Celo Sepolia (UUPS proxy).
-- Agent: ready, tsc-clean. Joins free duels, plays hunt/target, answers shots with proofs.
+- Contract: 17/17 tests, deployed Celo Sepolia (UUPS proxy). Random game ids,
+  requestBot (vs AI on demand), cancelDuel refund, reentrancy-hardened payouts.
+- Agent: ready, tsc-clean. Event-driven discovery, joins free duels on requestBot,
+  plays hunt/target, answers shots with proofs.
 - Web: production build green. 5 routes (/, /play, /game/[id], /about, /leaderboard).
-  Doodle-zine fullscreen UI, no-scroll, star wallet button, ship sprites w/ team colors.
+  Doodle-zine fullscreen UI, no-scroll, star wallet button, ship sprites w/ team colors,
+  vs Friend/vs AI toggle, wager presets, claim-forfeit, sunk-ship reveal.
 - Game loop verified: create duel → AI joins → both commit Merkle roots → fire/respond → victory.
-- Deployed: https://boateatsboat.vercel.app
-- Pending: mainnet deploy after final review, Talent App registration (Proof of Ship S2).
+- Deployed: https://boateatsboat.netlify.app (primary), https://boateatsboat.vercel.app
+- Pending: mainnet deploy, Talent App registration (Proof of Ship S2).
