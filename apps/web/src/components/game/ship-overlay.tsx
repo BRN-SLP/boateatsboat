@@ -102,14 +102,30 @@ export function ShipOverlay({
 
         return (
           <div key={i} className="absolute" style={{ left, top }}>
-            <ShipSprite
-              type={label}
-              fleet={fleet}
-              cellSize={cellSize}
-              cells={ship.cells}
-              state={state}
-              vertical={ship.vertical}
-            />
+            {ship.vertical ? (
+              <div
+                style={{
+                  transform: `translate(${cellSize}px, 0) rotate(90deg)`,
+                  transformOrigin: "0 0",
+                }}
+              >
+                <ShipSprite
+                  type={label}
+                  fleet={fleet}
+                  cellSize={cellSize}
+                  cells={ship.cells}
+                  state={state}
+                />
+              </div>
+            ) : (
+              <ShipSprite
+                type={label}
+                fleet={fleet}
+                cellSize={cellSize}
+                cells={ship.cells}
+                state={state}
+              />
+            )}
           </div>
         );
       })}

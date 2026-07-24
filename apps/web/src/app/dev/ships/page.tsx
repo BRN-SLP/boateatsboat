@@ -65,17 +65,24 @@ export default function ShipsDevPage() {
                 </div>
               </div>
 
-              {/* Vertical */}
+              {/* Vertical — visual rotation via CSS transform (diagnostic only,
+                  matches how the game currently renders vertical ships). */}
               <div>
-                <div className="mb-1 text-xs uppercase text-slate-500">Vertical</div>
+                <div className="mb-1 text-xs uppercase text-slate-500">Vertical (css rotate)</div>
                 <div className="relative bg-blue-50" style={{ width: CELL, height: vertBoxH }}>
                   <GridBg w={CELL} h={vertBoxH} />
                   <div
                     className="absolute border-2 border-rose-500"
                     style={{ width: CELL, height: vertBoxH }}
                   />
-                  <div className="absolute left-0 top-0">
-                    <ShipSprite type={s.type} fleet="blue" cellSize={CELL} cells={s.cells} vertical />
+                  <div
+                    className="absolute left-0 top-0"
+                    style={{
+                      transform: `translate(${CELL}px, 0) rotate(90deg)`,
+                      transformOrigin: "0 0",
+                    }}
+                  >
+                    <ShipSprite type={s.type} fleet="blue" cellSize={CELL} cells={s.cells} />
                   </div>
                 </div>
               </div>
