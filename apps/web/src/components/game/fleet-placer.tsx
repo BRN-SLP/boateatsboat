@@ -178,15 +178,16 @@ export function FleetPlacer({
 
       {/* Fleet control panel — wider, doodle-styled, with ship cards. */}
       <div className="doodle-border doodle-shadow flex flex-col gap-3 rounded-2xl bg-[#F9F7F2] p-4 md:w-72">
-        <div className="flex items-center justify-between">
-          <h3 className="font-marker text-lg uppercase tracking-wide text-[#1a1a1a]">
+        <div className="flex items-center gap-2">
+          <h3 className="shrink-0 whitespace-nowrap font-marker text-lg uppercase tracking-wide text-[#1a1a1a]">
             Place your fleet
           </h3>
           <button
             onClick={() => setOrientation((o) => (o === "h" ? "v" : "h"))}
-            className="doodle-border flex w-[72px] shrink-0 items-center justify-center rounded-lg bg-white px-3 py-1 font-marker text-xs uppercase text-[#1a1a1a] hover:scale-105"
+            className="doodle-border ml-auto flex h-7 w-[68px] shrink-0 items-center justify-center rounded-lg bg-white px-2 font-marker text-xs uppercase text-[#1a1a1a] active:translate-y-px"
+            aria-label={`Orientation: ${orientation === "h" ? "horizontal" : "vertical"}`}
           >
-            {orientation === "h" ? "↔ Horiz" : "↕ Vert"}
+            {orientation === "h" ? "Horiz" : "Vert"}
           </button>
         </div>
 
