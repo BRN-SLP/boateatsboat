@@ -48,10 +48,10 @@ export default function Home() {
             {/* Center: Header Title (original doodle logo, edge to edge) */}
             <header className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
               <img
-                src="/boateatsboat-logo.svg"
+                src="/boateatsboat-title.svg"
                 alt="BoatEatsBoat"
                 className="h-full w-full object-contain drop-shadow-md"
-                style={{ aspectRatio: "600 / 333" }}
+                style={{ aspectRatio: "640 / 356" }}
               />
             </header>
 
