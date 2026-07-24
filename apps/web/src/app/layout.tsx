@@ -22,6 +22,10 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: ['/og.png'],
   },
+  other: {
+    'talentapp:project_verification':
+      '89afb80bf7567bd65c97921cf8fe21bedfd1ec32ff45b333d7a018786ace55307afc4eb310bb493479a1fdc5b57dd7fa9eb603cdba79f5128853e880d37c407f',
+  },
 };
 
 export default function RootLayout({
