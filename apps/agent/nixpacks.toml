@@ -1,0 +1,16 @@
+# Nixpacks build config for the BoatEatsBoat AI agent on Railway.
+# Read directly by Railway's Nixpacks builder. Explicitly defines install +
+# build + start to avoid the "dist/ not found" failure in a pnpm monorepo.
+#
+# Railway service Settings -> Root Directory must be: apps/agent
+
+[phases.install]
+  # Install only the agent workspace + its deps (resolves viem from lockfile).
+  # corepack gives us the pnpm version pinned by the repo's packageManager.
+  cmds = ["corepack enable", "pnpm install --frozen-lockfile --filter @boateatsboat/agent..."]
+
+[phases.build]
+  cmds = ["pnpm --filter @boateatsboat/agent build"]
+
+[start]
+  cmd = "node dist/index.js"
