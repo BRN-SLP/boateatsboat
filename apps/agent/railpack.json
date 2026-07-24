@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "node",
+  "packages": {
+    "node": "20",
+    "pnpm": "8.10.0"
+  },
+  "steps": {
+    "install": {
+      "commands": [
+        "corepack enable",
+        "corepack prepare pnpm@8.10.0 --activate",
+        "pnpm install --frozen-lockfile --filter @boateatsboat/agent..."
+      ]
+    },
+    "build": {
+      "inputs": [{ "step": "install" }],
+      "commands": [
+        "pnpm --filter @boateatsboat/agent build"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "node dist/index.js"
+  }
+}
