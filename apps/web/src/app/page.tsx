@@ -45,12 +45,14 @@ export default function Home() {
               </Link>
             </nav>
 
-            {/* Center: Header Title */}
-            <header className="relative z-0 flex flex-1 flex-col items-center justify-start pt-2">
-              <h1 className="text-center font-creepster text-5xl leading-tight tracking-widest text-white text-outline-black drop-shadow-md md:text-6xl lg:text-7xl">
-                <span className="block">BATHTUB ARENA:</span>
-                <span className="mt-1 block">BOATEATSBOAT</span>
-              </h1>
+            {/* Center: Header Title (original doodle logo) */}
+            <header className="relative z-0 flex flex-1 flex-col items-center justify-center">
+              <img
+                src="/boateatsboat-logo.svg"
+                alt="BoatEatsBoat"
+                className="h-auto max-h-[40vh] w-auto max-w-[80%] object-contain drop-shadow-md"
+                style={{ aspectRatio: "600 / 333" }}
+              />
             </header>
 
             {/* Right: Connect Wallet Star */}
