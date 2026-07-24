@@ -11,6 +11,9 @@ export default function GamePage() {
   // Memoize — BigInt creates a new object every call, which would restart
   // useEffect dependencies in child components on every render.
   const gameId = useMemo(() => BigInt(params.id), [params.id]);
+  // Display only a short prefix of the random uint256 game id; the full id
+  // stays in the URL and is available via the title tooltip.
+  const shortId = useMemo(() => params.id.slice(0, 6), [params.id]);
   const [theme, setTheme] = useState<"inferno" | "classic">("inferno");
 
   return (
@@ -29,8 +32,11 @@ export default function GamePage() {
           </Link>
         </nav>
 
-        <h1 className="absolute left-1/2 -translate-x-1/2 font-creepster text-2xl tracking-widest text-[#1a1a1a] md:text-3xl">
-          DUEL #{params.id}
+        <h1
+          title={`Full game id: ${params.id}`}
+          className="absolute left-1/2 max-w-[40vw] -translate-x-1/2 truncate font-creepster text-2xl tracking-widest text-[#1a1a1a] md:text-3xl"
+        >
+          DUEL #{shortId}
         </h1>
 
         <div className="flex items-center gap-2">
