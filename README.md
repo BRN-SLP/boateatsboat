@@ -27,7 +27,7 @@ apps/
 | Chain | Proxy | Impl |
 |---|---|---|
 | Celo Sepolia (11142220) | `0x1c8780b202af9917ba8CaeD65202ffD2013d2205` | `0xF37952f4aa7598CE2977917741995CC837998E66` |
-| Celo mainnet (42220) | _not deployed yet_ | _not deployed yet_ |
+| Celo mainnet (42220) | `0xa05E6B19Dd828E955331C097e8Af4DBd0c42d3f9` | `0x3727A23091A1f49601f348Cf3442b29d4ff6ba2d` |
 
 Payment token: USDm on Sepolia (`0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`), cUSD on mainnet (`0x765DE816845861e75A25fCA122bb6898B8B1282a`).
 

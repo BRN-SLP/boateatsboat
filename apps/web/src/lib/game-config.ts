@@ -10,7 +10,7 @@ export const GAME_PROXY: Record<number, Address> = {
   [celoSepolia.id]: (process.env.NEXT_PUBLIC_GAME_PROXY_SEPOLIA as Address) ??
     "0x1c8780b202af9917ba8CaeD65202ffD2013d2205",
   [celo.id]: (process.env.NEXT_PUBLIC_GAME_PROXY_MAINNET as Address) ??
-    "0x0000000000000000000000000000000000000000", // not deployed yet
+    "0xa05E6B19Dd828E955331C097e8Af4DBd0c42d3f9",
 };
 
 // USDm on Sepolia, cUSD on mainnet (per celopedia / celo-stablecoins skills).
