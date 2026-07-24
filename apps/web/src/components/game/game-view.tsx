@@ -11,6 +11,7 @@ import { randomBoard } from "@/lib/random-board";
 import { Board, emptyBoard, type BoardState, type CellVisual } from "./board";
 import { FleetPlacer, type PlacementResult } from "./fleet-placer";
 import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 type Theme = "inferno" | "classic";
 
@@ -266,6 +267,7 @@ function ActiveBattle({
   // boards side-by-side AND within the available height. Deterministic: no
   // aspect-ratio/flex fragility.
   const boardsRef = useRef<HTMLDivElement>(null);
+  const infoRef = useRef<HTMLDivElement>(null);
   const [cellSize, setCellSize] = useState(28);
   useEffect(() => {
     const el = boardsRef.current;
@@ -273,19 +275,20 @@ function ActiveBattle({
     const compute = () => {
       const r = el.getBoundingClientRect();
       if (r.width <= 0 || r.height <= 0) return;
-      // Three columns: board | info(176px) | board, plus gaps.
-      // Each board: 18px row-label column + 10 cells + gaps + borders.
-      // Be conservative: a generous safety margin (40px overhead per board,
-      // 10% global scale-down) guarantees the boards never overflow even with
-      // padding/border rounding differences across browsers.
-      const infoColW = 176 + 24; // central info column + both gaps allowance
+      // Measure the real central-column width (responsive: w-32 on mobile,
+      // w-44 on desktop) instead of a hard-coded constant, plus both gaps
+      // (2 × gap-3 = 24px). Falls back to 200 if the ref isn't ready yet.
+      const infoW = infoRef.current?.getBoundingClientRect().width ?? 176;
+      const infoColW = infoW + 24;
       const perBoardW = (r.width - infoColW) / 2;
-      const byW = Math.floor((perBoardW - 40) / 10);
+      // Each board: ~18px row-label column + 10 cells + gaps + borders.
+      // 24px per-board overhead covers labels/border rounding.
+      const byW = Math.floor((perBoardW - 24) / 10);
       // Height: title (~20px) + column-letter row (~ one cell) + 10 cells,
       // plus a 16px safety margin.
       const byH = Math.floor((r.height - 36) / 11);
-      // 10% safety scale-down so border/padding rounding never pushes overflow.
-      const cs = Math.max(12, Math.floor(Math.min(byW, byH) * 0.9));
+      // Small 5% safety so border/padding rounding never pushes overflow.
+      const cs = Math.max(14, Math.floor(Math.min(byW, byH) * 0.95));
       setCellSize(cs);
     };
     compute();
@@ -534,8 +537,8 @@ function ActiveBattle({
         />
 
         {/* Central info column: turn status, action button, sunk ships, legend.
-            Fixed width so it never reflows the boards when content changes. */}
-        <div className="flex w-44 shrink-0 flex-col items-center justify-center gap-3">
+            Responsive width: narrower on mobile so both boards keep room. */}
+        <div ref={infoRef} className="flex w-32 shrink-0 flex-col items-center justify-center gap-2 md:w-44 md:gap-3">
           <StatusLine
             myTurn={myTurn}
             mustRespond={mustRespond}
@@ -585,9 +588,41 @@ function ActiveBattle({
         />
       </div>
 
-      {/* Fleet legend — toggleable, collapsed by default, at the bottom. */}
-      <div className="flex shrink-0 justify-center">
+      {/* Fleet legend. Desktop: inline toggle. Mobile: button -> bottom sheet
+          (so it never steals vertical space from the boards). */}
+      <div className="hidden shrink-0 justify-center md:flex">
         <FleetLegend />
+      </div>
+      <div className="flex shrink-0 justify-center md:hidden">
+        <FleetLegendMobile />
+      </div>
+    </div>
+  );
+}
+
+// The four-ship reference cards. Shared between the inline (desktop) toggle
+// and the mobile bottom-sheet so the content stays in sync.
+const FLEET_SHIPS = [
+  { emoji: "🛳️", name: "Carrier", size: 5, hp: 1, rule: "Standard — sinks in one hit per cell" },
+  { emoji: "🚢", name: "Battleship", size: 4, hp: 2, rule: "🛡️ Armor — first hit wounds (steals the turn), second hit destroys" },
+  { emoji: "⛴️", name: "Cruiser", size: 3, hp: 1, rule: "Standard — sinks in one hit per cell" },
+  { emoji: "🤿", name: "Submarine", size: 3, hp: 1, rule: "🌊 Stealth — hidden until hit, revealed on first shot" },
+];
+
+function FleetLegendCards() {
+  return (
+    <div className="doodle-border doodle-shadow rounded-xl bg-[#F9F7F2] p-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {FLEET_SHIPS.map((s) => (
+          <div key={s.name} className="flex flex-col gap-0.5 rounded-lg border border-[#1a1a1a]/10 bg-white px-2 py-1.5">
+            <div className="flex items-center gap-1">
+              <span className="text-base leading-none">{s.emoji}</span>
+              <span className="font-marker text-xs uppercase text-[#1a1a1a]">{s.name}</span>
+            </div>
+            <div className="font-mono text-[10px] text-[#1a1a1a]/50">{s.size} cells · {s.hp} HP</div>
+            <div className="text-[10px] leading-tight text-[#1a1a1a]/70">{s.rule}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -597,12 +632,6 @@ function ActiveBattle({
 // Collapsible: a small info button toggles the card grid.
 function FleetLegend() {
   const [open, setOpen] = useState(false);
-  const ships = [
-    { emoji: "🛳️", name: "Carrier", size: 5, hp: 1, rule: "Standard — sinks in one hit per cell" },
-    { emoji: "🚢", name: "Battleship", size: 4, hp: 2, rule: "🛡️ Armor — first hit wounds (steals the turn), second hit destroys" },
-    { emoji: "⛴️", name: "Cruiser", size: 3, hp: 1, rule: "Standard — sinks in one hit per cell" },
-    { emoji: "🤿", name: "Submarine", size: 3, hp: 1, rule: "🌊 Stealth — hidden until hit, revealed on first shot" },
-  ];
   return (
     <div className="flex flex-col items-center gap-2">
       <button
@@ -625,24 +654,35 @@ function FleetLegend() {
             transition={{ duration: 0.2 }}
             className="w-full overflow-hidden"
           >
-            <div className="doodle-border doodle-shadow rounded-xl bg-[#F9F7F2] p-3">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {ships.map((s) => (
-                  <div key={s.name} className="flex flex-col gap-0.5 rounded-lg border border-[#1a1a1a]/10 bg-white px-2 py-1.5">
-                    <div className="flex items-center gap-1">
-                      <span className="text-base leading-none">{s.emoji}</span>
-                      <span className="font-marker text-xs uppercase text-[#1a1a1a]">{s.name}</span>
-                    </div>
-                    <div className="font-mono text-[10px] text-[#1a1a1a]/50">{s.size} cells · {s.hp} HP</div>
-                    <div className="text-[10px] leading-tight text-[#1a1a1a]/70">{s.rule}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <FleetLegendCards />
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// Mobile version: hidden behind a button that opens a bottom sheet, so the
+// legend no longer competes with the boards for vertical space on phones.
+function FleetLegendMobile() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <button
+          type="button"
+          className="doodle-border doodle-shadow flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-marker text-xs uppercase tracking-wider text-[#1a1a1a]"
+        >
+          <span className="text-sm">🚢</span>
+          Fleet intel
+        </button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="max-h-[80dvh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-marker uppercase">Fleet intel</SheetTitle>
+        </SheetHeader>
+        <FleetLegendCards />
+      </SheetContent>
+    </Sheet>
   );
 }
 
