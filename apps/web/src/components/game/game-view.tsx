@@ -122,7 +122,7 @@ export function GameView({ gameId, theme }: { gameId: bigint; theme: Theme }) {
             onClick={onWaitCancel}
             className="doodle-border doodle-shadow rounded-xl bg-[#1a1a1a] px-4 py-2 font-marker text-xs uppercase text-white"
           >
-            Cancel &amp; refund
+            {game.wager > 0n ? "Cancel & refund" : "Cancel duel"}
           </button>
         )}
       </div>
