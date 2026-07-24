@@ -37,7 +37,9 @@ async function main() {
 // GameCreated event rather than iterating 1..n.
 async function recentGameIds(): Promise<bigint[]> {
   const currentBlock = await publicClient.getBlockNumber();
-  const fromBlock = currentBlock > 45000n ? currentBlock - 45000n : 0n;
+  // Celo mainnet Forno limits eth_getLogs to a 5000-block span (was 50000).
+  // Stay under it: ~75 min of history at ~1s blocks is enough to catch duels.
+  const fromBlock = currentBlock > 4500n ? currentBlock - 4500n : 0n;
   const logs = await publicClient.getLogs({
     address: gameAddress,
     event: {
