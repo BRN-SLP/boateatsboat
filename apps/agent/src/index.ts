@@ -8,6 +8,8 @@ import {
   BOARD_SIZE,
 } from "./board.js";
 import { HuntTargetAI } from "./strategy.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 // Active games the agent is participating in. Keyed by gameId.
 interface AgentGame {
@@ -23,6 +25,49 @@ const activeGames: Map<bigint, AgentGame> = new Map();
 // to whenever the agent joins a game, so long-running duels are still polled
 // on every tick even after their GameCreated event ages out of the log window.
 const trackedGames: Set<bigint> = new Set();
+
+// Persistent board storage. The agent's board (the 100-cell types[]) MUST
+// survive container restarts — without it, the agent cannot produce valid
+// Merkle proofs for respondShot (the on-chain commitment was built from a
+// specific random board; a freshly generated one won't match).
+// Stored as a JSON map: { "<gameId>": [t0, t1, ... t99] } on a Railway Volume
+// mounted at /data. Falls back to in-memory only if /data is unavailable.
+const BOARDS_FILE = process.env.BOARDS_FILE ?? "/data/agent-boards.json";
+
+function loadPersistedBoards(): Record<string, number[]> {
+  try {
+    if (!existsSync(BOARDS_FILE)) return {};
+    return JSON.parse(readFileSync(BOARDS_FILE, "utf8"));
+  } catch (e) {
+    console.warn(`[agent] could not read ${BOARDS_FILE}:`, (e as Error).message);
+    return {};
+  }
+}
+
+function persistBoard(gameId: bigint, types: number[]) {
+  try {
+    const dir = dirname(BOARDS_FILE);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const all = loadPersistedBoards();
+    all[gameId.toString()] = types;
+    writeFileSync(BOARDS_FILE, JSON.stringify(all));
+  } catch (e) {
+    // Non-fatal: in-memory still works until the next restart.
+    console.warn(`[agent] could not persist board for ${gameId}:`, (e as Error).message);
+  }
+}
+
+function forgetBoard(gameId: bigint) {
+  try {
+    const all = loadPersistedBoards();
+    if (all[gameId.toString()]) {
+      delete all[gameId.toString()];
+      writeFileSync(BOARDS_FILE, JSON.stringify(all));
+    }
+  } catch {
+    // ignore
+  }
+}
 
 const POLL_INTERVAL_MS = 12_000; // poll every 12s
 
@@ -147,6 +192,7 @@ async function considerGame(gameId: bigint) {
   if (state === 3) {
     activeGames.delete(gameId);
     trackedGames.delete(gameId);
+    forgetBoard(gameId);
     return;
   }
 
@@ -210,9 +256,11 @@ async function joinGame(gameId: bigint) {
 
 async function commitIfNeeded(gameId: bigint, game: any, myIdx: 0 | 1) {
   if (game.players[myIdx].acknowledged) return;
-  // Lazily build our board + tree.
+  // Lazily build our board + tree. Try persisted board first (e.g. after a
+  // restart that happened between join and commit); otherwise generate fresh.
   if (!activeGames.has(gameId)) {
-    const { types } = randomBoard();
+    const persisted = loadPersistedBoards()[gameId.toString()];
+    const types = persisted ?? randomBoard().types;
     const tree = buildMerkleTree(types);
     activeGames.set(gameId, {
       boardTypes: types,
@@ -233,6 +281,8 @@ async function commitIfNeeded(gameId: bigint, game: any, myIdx: 0 | 1) {
       chain: CHAIN,
     });
     await publicClient.waitForTransactionReceipt({ hash });
+    // Persist the committed board so we can rebuild proofs after a restart.
+    persistBoard(gameId, ag.boardTypes);
     console.log(`[agent] committed board for game ${gameId} (root ${ag.tree.root.slice(0, 10)}...)`);
   } catch (e) {
     console.error(`[agent] commitBoard ${gameId} failed:`, (e as Error).message);
@@ -240,11 +290,22 @@ async function commitIfNeeded(gameId: bigint, game: any, myIdx: 0 | 1) {
 }
 
 async function playActiveTurn(gameId: bigint, game: any, myIdx: 0 | 1) {
-  // Ensure we have an AgentGame entry (in case we joined mid-flight).
+  // Ensure we have an AgentGame entry. If not in memory (e.g. after a
+  // restart), try to rebuild it from the persisted board file — without it
+  // we cannot answer pending shots with a valid Merkle proof.
   if (!activeGames.has(gameId)) {
-    // Cannot reconstruct our board if we did not commit -- skip defensively.
-    console.warn(`[agent] game ${gameId}: active but no local board, skipping`);
-    return;
+    const persisted = loadPersistedBoards()[gameId.toString()];
+    if (!persisted) {
+      console.warn(`[agent] game ${gameId}: active but no persisted board, skipping`);
+      return;
+    }
+    activeGames.set(gameId, {
+      boardTypes: persisted,
+      tree: buildMerkleTree(persisted),
+      ai: new HuntTargetAI(),
+      myIdx,
+    });
+    console.log(`[agent] restored board for game ${gameId} from disk`);
   }
   const ag = activeGames.get(gameId)!;
 
