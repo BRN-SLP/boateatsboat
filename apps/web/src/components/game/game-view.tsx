@@ -345,44 +345,71 @@ function ActiveBattle({
       }
     };
 
-    // 1. Load historical ShotResolved events for this game.
-    // Celo mainnet Forno caps eth_getLogs at ~5000 blocks per request, so we
-    // paginate backwards from the latest block in 4500-block chunks. This
-    // recovers shots from long duels that started hours ago.
-    publicClient.getBlockNumber().then(async (currentBlock) => {
+    // 1. Load historical ShotResolved events for this game and keep polling
+    //    for new ones. Celo mainnet Forno caps eth_getLogs at ~5000 blocks
+    //    per request, so we paginate backwards from the latest block in
+    //    4500-block chunks, then poll the recent window on an interval.
+    //    (We deliberately avoid viem's watchEvent here: on an HTTP transport
+    //    it needs poll:true and behaves inconsistently across versions,
+    //    whereas an explicit poll loop is reliable and updates the UI.)
+    let lastSeenBlock: bigint | null = null;
+    let stopped = false;
+
+    const loadRange = async (from: bigint, to: bigint) => {
       const CHUNK = 4500n;
-      const lookback = 100_000n; // ~28h of Celo blocks; plenty for any duel
-      let from = currentBlock > lookback ? currentBlock - lookback : 0n;
-      while (from <= currentBlock) {
-        const to = from + CHUNK > currentBlock ? currentBlock : from + CHUNK;
+      let cur = from;
+      while (cur <= to && !stopped) {
+        const chunkTo = cur + CHUNK > to ? to : cur + CHUNK;
         try {
           const logs = await publicClient.getLogs({
             address: proxy,
             event: shotEvent,
             args: { gameId },
-            fromBlock: from,
-            toBlock: to,
+            fromBlock: cur,
+            toBlock: chunkTo,
           });
           applyLogs(logs);
+          lastSeenBlock = chunkTo;
         } catch (e) {
           console.warn("[game-view] ShotResolved chunk failed:", (e as Error)?.message);
           break;
         }
-        from = to + 1n;
+        cur = chunkTo + 1n;
       }
-    }).catch((e) => {
-      console.warn("[game-view] historical ShotResolved load failed:", e?.message);
-    });
+    };
 
-    // 2. Watch for new events.
-    const unwatch = publicClient.watchEvent({
-      address: proxy,
-      event: shotEvent,
-      args: { gameId },
-      onLogs: applyLogs,
-      pollingInterval: 4000,
-    });
-    return () => { unwatch(); };
+    const initial = async () => {
+      try {
+        const currentBlock = await publicClient.getBlockNumber();
+        const lookback = 100_000n; // ~28h; plenty for any duel
+        const from = currentBlock > lookback ? currentBlock - lookback : 0n;
+        await loadRange(from, currentBlock);
+      } catch (e) {
+        console.warn("[game-view] historical ShotResolved load failed:", (e as Error)?.message);
+      }
+    };
+    initial();
+
+    // 2. Poll for new events every 4s. We re-fetch the small recent window;
+    // applyLogs is idempotent (Map.set overwrites identical keys), so duplicates
+    // from the overlap with lastSeenBlock are harmless.
+    const POLL_INTERVAL = 4000;
+    const poll = setInterval(async () => {
+      if (stopped) return;
+      try {
+        const currentBlock = await publicClient.getBlockNumber();
+        const from = lastSeenBlock ? lastSeenBlock + 1n : (currentBlock > 4500n ? currentBlock - 4500n : 0n);
+        if (from > currentBlock) return;
+        await loadRange(from, currentBlock);
+      } catch {
+        // transient; next tick will retry
+      }
+    }, POLL_INTERVAL);
+
+    return () => {
+      stopped = true;
+      clearInterval(poll);
+    };
   }, [publicClient, chain, gameId, meIdx, setEnemyShots, setMyShots]);
 
   // Build enemy board visual: fog for un-fired cells, hit/miss for fired.
