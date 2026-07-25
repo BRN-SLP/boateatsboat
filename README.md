@@ -26,10 +26,9 @@ apps/
 
 | Chain | Proxy | Impl |
 |---|---|---|
-| Celo Sepolia (11142220) | `0x1c8780b202af9917ba8CaeD65202ffD2013d2205` | `0xF37952f4aa7598CE2977917741995CC837998E66` |
 | Celo mainnet (42220) | `0xa05E6B19Dd828E955331C097e8Af4DBd0c42d3f9` | `0x3727A23091A1f49601f348Cf3442b29d4ff6ba2d` |
 
-Payment token: USDm on Sepolia (`0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`), cUSD on mainnet (`0x765DE816845861e75A25fCA122bb6898B8B1282a`).
+Payment token: cUSD (`0x765DE816845861e75A25fCA122bb6898B8B1282a`).
 
 ## Local development
 
@@ -70,8 +69,7 @@ PAYMENT_TOKEN=0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80 \
 2. Import on Vercel. Root: `/`. Build command: `pnpm build`. Output: auto (Next.js).
 3. Set env vars:
    - `NEXT_PUBLIC_WC_PROJECT_ID` (WalletConnect project ID from cloud.walletconnect.com)
-   - `NEXT_PUBLIC_GAME_PROXY_SEPOLIA=0x1c8780b202af9917ba8CaeD65202ffD2013d2205` (already default)
-   - `NEXT_PUBLIC_GAME_PROXY_MAINNET` (when mainnet deploys)
+   - `NEXT_PUBLIC_GAME_PROXY_MAINNET` is already hardcoded to the deployed proxy; override only if redeploying.
 4. Deploy.
 
 ### Agent (Railway — always-on bot)
@@ -101,7 +99,7 @@ Netlify/Vercel, which only serve request/response functions).
 
 ## Status (2026-07-24)
 
-- Contract: 17/17 tests, deployed Celo Sepolia (UUPS proxy). Random game ids,
+- Contract: 17/17 tests, deployed Celo mainnet (UUPS proxy). Random game ids,
   requestBot (vs AI on demand), cancelDuel refund, reentrancy-hardened payouts.
 - Agent: ready, tsc-clean. Event-driven discovery, joins free duels on requestBot,
   plays hunt/target, answers shots with proofs.
