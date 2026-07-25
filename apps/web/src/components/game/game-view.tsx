@@ -346,17 +346,33 @@ function ActiveBattle({
     };
 
     // 1. Load historical ShotResolved events for this game.
-    // Use a recent fromBlock — Celo rejects getLogs from genesis.
-    publicClient.getBlockNumber().then((currentBlock) => {
-      const fromBlock = currentBlock > 45000n ? currentBlock - 45000n : 0n;
-      return publicClient.getLogs({
-        address: proxy,
-        event: shotEvent,
-        args: { gameId },
-        fromBlock,
-        toBlock: "latest",
-      });
-    }).then(applyLogs).catch(() => {});
+    // Celo mainnet Forno caps eth_getLogs at ~5000 blocks per request, so we
+    // paginate backwards from the latest block in 4500-block chunks. This
+    // recovers shots from long duels that started hours ago.
+    publicClient.getBlockNumber().then(async (currentBlock) => {
+      const CHUNK = 4500n;
+      const lookback = 100_000n; // ~28h of Celo blocks; plenty for any duel
+      let from = currentBlock > lookback ? currentBlock - lookback : 0n;
+      while (from <= currentBlock) {
+        const to = from + CHUNK > currentBlock ? currentBlock : from + CHUNK;
+        try {
+          const logs = await publicClient.getLogs({
+            address: proxy,
+            event: shotEvent,
+            args: { gameId },
+            fromBlock: from,
+            toBlock: to,
+          });
+          applyLogs(logs);
+        } catch (e) {
+          console.warn("[game-view] ShotResolved chunk failed:", (e as Error)?.message);
+          break;
+        }
+        from = to + 1n;
+      }
+    }).catch((e) => {
+      console.warn("[game-view] historical ShotResolved load failed:", e?.message);
+    });
 
     // 2. Watch for new events.
     const unwatch = publicClient.watchEvent({
