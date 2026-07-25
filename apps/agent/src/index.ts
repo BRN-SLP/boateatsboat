@@ -18,6 +18,12 @@ interface AgentGame {
 }
 const activeGames: Map<bigint, AgentGame> = new Map();
 
+// Game ids where the agent is a participant. Unlike recentGameIds() (which
+// only sees the last ~4500 blocks of GameCreated logs), this set is appended
+// to whenever the agent joins a game, so long-running duels are still polled
+// on every tick even after their GameCreated event ages out of the log window.
+const trackedGames: Set<bigint> = new Set();
+
 const POLL_INTERVAL_MS = 12_000; // poll every 12s
 
 console.log(`[BoatEatsBoat agent] address=${AGENT_ADDRESS} chain=${CHAIN.name}`);
@@ -57,8 +63,47 @@ async function recentGameIds(): Promise<bigint[]> {
   return logs.map((l) => (l.args as any).gameId as bigint);
 }
 
+// On startup, restore the trackedGames set by scanning a wider window of
+// OpponentJoined logs where the agent is the joiner. Celo Forno caps eth_getLogs
+// at 5000 blocks, so chunk the scan. Looks back ~12h (45000 blocks @ ~1s).
+const CHUNK = 4500n;
+async function restoreTrackedGames() {
+  const cur = await publicClient.getBlockNumber();
+  const lookback = 45000n;
+  const start = cur > lookback ? cur - lookback : 0n;
+  const ev = {
+    type: "event" as const,
+    name: "OpponentJoined",
+    inputs: [
+      { name: "gameId", type: "uint256", indexed: true },
+      { name: "opponent", type: "address", indexed: true },
+    ],
+  };
+  for (let from = start; from <= cur; from += CHUNK + 1n) {
+    const to = from + CHUNK > cur ? cur : from + CHUNK;
+    try {
+      const logs = await publicClient.getLogs({
+        address: gameAddress,
+        event: ev,
+        args: { opponent: AGENT_ADDRESS },
+        fromBlock: from,
+        toBlock: to,
+      });
+      for (const l of logs) {
+        const id = (l.args as any).gameId as bigint | undefined;
+        if (id !== undefined) trackedGames.add(id);
+      }
+    } catch {
+      // ignore chunk errors during restore; trackedGames will fill from joinGame
+    }
+  }
+  console.log(`[agent] restored ${trackedGames.size} tracked game(s) from history`);
+}
+
 async function catchUpExistingGames() {
-  const ids = await recentGameIds();
+  await restoreTrackedGames();
+  const ids = new Set<bigint>(await recentGameIds());
+  for (const id of trackedGames) ids.add(id);
   for (const id of ids) {
     try {
       await considerGame(id);
@@ -70,7 +115,12 @@ async function catchUpExistingGames() {
 
 async function tick() {
   try {
-    const ids = await recentGameIds();
+    // Discover newly created games (last ~75 min of GameCreated logs) PLUS
+    // every game we are already tracking. The union keeps long-running duels
+    // alive on the poll loop even after the creation event ages out.
+    const recent = await recentGameIds();
+    const ids = new Set<bigint>(recent);
+    for (const id of trackedGames) ids.add(id);
     for (const id of ids) {
       try {
         await considerGame(id);
@@ -96,6 +146,7 @@ async function considerGame(gameId: bigint) {
   // 0=Open 1=Placing 2=Active 3=Finished
   if (state === 3) {
     activeGames.delete(gameId);
+    trackedGames.delete(gameId);
     return;
   }
 
@@ -148,6 +199,9 @@ async function joinGame(gameId: bigint) {
       chain: CHAIN,
     });
     await publicClient.waitForTransactionReceipt({ hash });
+    // Track this game forever (until Finished) so it stays on the poll loop
+    // even after its GameCreated log ages out of the discovery window.
+    trackedGames.add(gameId);
     console.log(`[agent] joined game ${gameId} (tx ${hash})`);
   } catch (e) {
     console.error(`[agent] joinDuel ${gameId} failed:`, (e as Error).message);
