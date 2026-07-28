@@ -438,55 +438,109 @@ function ActiveBattle({
     return { cells };
   }, [placement, myShots]);
 
-  // Detect sunk enemy ships from revealed hits. Group adjacent destroyed cells
-  // of the same type into a ship run; a ship is sunk when every cell in the run
-  // is destroyed. carrier=5/type1, cruiser=3/type1, battleship=4/type21, sub=3/type41.
+  // Detect CONFIRMED sunk enemy ships from revealed hits and draw their
+  // silhouette exactly once, with the correct type.
+  //
+  // The contract knows nothing about ships — only cells and a per-player
+  // cell counter — so "Carrier vs Cruiser" is a CLIENT-side guess from the
+  // revealed cells. The old code guessed the type from the *current* length of
+  // a destroyed-cell run, which is wrong: a 1-HP ship dies cell-by-cell, so a
+  // half-sunk 5-cell Carrier (3 dead cells) rendered as a fake "Cruiser" and
+  // then "jumped" to Carrier on the killing shot. That is the bug players saw
+  // ("found another 3-decker, then it turned into the 5-decker").
+  //
+  // A ship's true length/type is only knowable once its outline is CLOSED on
+  // both ends along its axis — i.e. the cell past each end is water/miss, off
+  // the board, or a different-type hit (a fog cell there means "might continue",
+  // so the length is still unknown and we must NOT draw a silhouette). We also
+  // build the outline from ALL hits of one type (wounded armor 🛡️ and revealed
+  // stealth 🤿 included), not just destroyed cells, so a Battleship forms a
+  // proper run before it is fully killed. A ship counts as sunk only when every
+  // cell in that closed outline is destroyed.
   const { sunkNames, sunkRuns } = useMemo<{
     sunkNames: string[];
     sunkRuns: { type: number; cells: number; startX: number; startY: number; vertical: boolean }[];
   }>(() => {
-    const destroyed = new Set<number>();
-    const types = new Map<number, number>();
+    // Per-cell reveal data for every hit we have fired at the enemy.
+    const hitType = new Map<number, number>();      // idx -> cellType
+    const destroyed = new Set<number>();             // idx of fully-killed cells
     for (const [idx, info] of enemyShots) {
-      if (info.kind === "hit" && info.destroyed) {
-        destroyed.add(idx);
-        if (info.cellType != null) types.set(idx, info.cellType);
-      }
+      if (info.kind !== "hit") continue;
+      if (info.cellType != null) hitType.set(idx, info.cellType);
+      if (info.destroyed) destroyed.add(idx);
     }
+    // A cell we have fired at but that is NOT a same-type hit (miss, or a hit of
+    // another type). Used to test whether a run's end is "closed".
+    const firedNotSame = (idx: number, t: number) => {
+      if (!enemyShots.has(idx)) return false;        // fog -> unknown -> open end
+      const ht = hitType.get(idx);
+      return ht == null || ht !== t;                 // miss or other-type hit
+    };
+
     const names: string[] = [];
     const runs: { type: number; cells: number; startX: number; startY: number; vertical: boolean }[] = [];
     const visited = new Set<number>();
-    for (const start of destroyed) {
+
+    // Grow a same-type hit run along one axis, returning its cells in order.
+    const line = (start: number, t: number, dx: number, dy: number) => {
+      const out: number[] = [];
+      let cx = start % BOARD_SIZE, cy = Math.floor(start / BOARD_SIZE);
+      for (;;) {
+        cx += dx; cy += dy;
+        if (cx < 0 || cx >= BOARD_SIZE || cy < 0 || cy >= BOARD_SIZE) break;
+        const n = cy * BOARD_SIZE + cx;
+        if (hitType.get(n) === t) { out.push(n); visited.add(n); }
+        else break;
+      }
+      return out;
+    };
+    // Is the end beyond `endIdx` (one more step in dx,dy) closed?
+    const endClosed = (endIdx: number, t: number, dx: number, dy: number) => {
+      let cx = endIdx % BOARD_SIZE + dx, cy = Math.floor(endIdx / BOARD_SIZE) + dy;
+      if (cx < 0 || cx >= BOARD_SIZE || cy < 0 || cy >= BOARD_SIZE) return true; // board edge
+      return firedNotSame(cy * BOARD_SIZE + cx, t);
+    };
+
+    for (const [start, t] of hitType) {
       if (visited.has(start)) continue;
-      const t = types.get(start) ?? 1;
-      // Expand run horizontally and vertically from start, same type.
-      const run = [start];
       visited.add(start);
-      const expand = (idx: number, dx: number, dy: number) => {
-        let cx = idx % BOARD_SIZE, cy = Math.floor(idx / BOARD_SIZE);
-        for (;;) {
-          cx += dx; cy += dy;
-          if (cx < 0 || cx >= BOARD_SIZE || cy < 0 || cy >= BOARD_SIZE) break;
-          const n = cy * BOARD_SIZE + cx;
-          if (destroyed.has(n) && (types.get(n) ?? 1) === t) { run.push(n); visited.add(n); }
-          else break;
-        }
-      };
-      expand(start, 1, 0); expand(start, -1, 0);
-      expand(start, 0, 1); expand(start, 0, -1);
-      // Classify by (type, length).
+      // Try horizontal then vertical; a real ship is a straight line.
+      const h = [start, ...line(start, t, 1, 0), ...line(start, t, -1, 0)];
+      const v = [start, ...line(start, t, 0, 1), ...line(start, t, 0, -1)];
+      const horizontal = h.length >= v.length;
+      const run = horizontal ? h : v;
       const len = run.length;
-      const minX = Math.min(...run.map((i) => i % BOARD_SIZE));
-      const minY = Math.min(...run.map((i) => Math.floor(i / BOARD_SIZE)));
-      const vertical = run.some((i) => Math.floor(i / BOARD_SIZE) !== minY);
+      if (len < 3) continue; // no ship is shorter than 3
+      // Every cell of the outline must be destroyed, else the ship is alive.
+      if (!run.every((i) => destroyed.has(i))) continue;
+      // Decide the type. A run whose length EXACTLY matches a single ship of
+      // that type cannot be a fragment of a longer ship — ships of the same
+      // type never touch in a valid board — so it is confirmed sunk even if we
+      // never fired past its ends (a fully-killed Carrier with fog beyond its
+      // bow/stern still shows). For type 1 only length 5 is unambiguous (the
+      // Carrier); length 3 is AMBIGUOUS (a Cruiser OR the middle of a Carrier)
+      // and is only confirmed once both ends are closed by water/edge/other
+      // type, proving the outline is the whole ship and not a fragment.
+      const exactLen = (t === 1 && len === 5) || (t === 21 && len === 4) || (t === 41 && len === 3);
+      if (!exactLen) {
+        const a = run[0], b = run[len - 1];
+        const closed = horizontal
+          ? endClosed(a, t, -1, 0) && endClosed(b, t, 1, 0)
+          : endClosed(a, t, 0, -1) && endClosed(b, t, 0, 1);
+        if (!closed) continue;
+      }
+
+      const xs = run.map((i) => i % BOARD_SIZE);
+      const ys = run.map((i) => Math.floor(i / BOARD_SIZE));
+      const vertical = !horizontal;
       let name: string | null = null;
-      if (t === 41 && len >= 3) name = "Submarine";
-      else if (t === 21 && len >= 4) name = "Battleship";
-      else if (t === 1 && len >= 5) name = "Carrier";
-      else if (t === 1 && len >= 3) name = "Cruiser";
+      if (t === 41 && len === 3) name = "Submarine";
+      else if (t === 21 && len === 4) name = "Battleship";
+      else if (t === 1 && len === 5) name = "Carrier";
+      else if (t === 1 && len === 3) name = "Cruiser";
       if (name) {
         names.push(name);
-        runs.push({ type: t, cells: len, startX: minX, startY: minY, vertical });
+        runs.push({ type: t, cells: len, startX: Math.min(...xs), startY: Math.min(...ys), vertical });
       }
     }
     return { sunkNames: names, sunkRuns: runs };
